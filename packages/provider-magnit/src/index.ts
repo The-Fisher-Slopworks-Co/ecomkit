@@ -31,6 +31,7 @@ const API_URL = "https://middle-api.magnit.ru/";
 const DEFAULT_PAGE_SIZE = 20;
 const STORE_SEARCH_RADIUS_METERS = 3000;
 const RECENT_ORDERS = 10;
+const ANY_STORE = "777885";
 
 interface Good {
   readonly id: string;
@@ -103,7 +104,7 @@ export function createMagnitProvider({
   const session = new Session(deviceId);
 
   async function preview(ctx: ProviderContext) {
-    const store = await ctx.secrets.require("store");
+    const store = (await ctx.secrets.get("store")) ?? ANY_STORE;
     return session.authorized(ctx, (headers) =>
       ctx.http(API_URL).get<CheckoutPreviewResponse>("v1/checkout/preview", {
         headers: { ...headers, ...checkoutHeaders(store) },
@@ -176,14 +177,13 @@ export function createMagnitProvider({
 
     async login(ask, ctx, options) {
       await session.signIn(ask, ctx, options);
-      if ((await ctx.secrets.get("store")) === undefined) return;
       const store = (await preview(ctx)).deliveryInfo?.store?.storeCode;
       if (store) await ctx.secrets.set("store", store);
     },
 
     async search({ text, limit = DEFAULT_PAGE_SIZE, cursor }, ctx) {
       const offset = parseCursor(cursor);
-      const store = await ctx.secrets.require("store");
+      const store = await chosenStore(ctx);
       const page = await api(ctx).post<GoodsSearchResponse>("v2/goods/search", {
         ...EXPRESS,
         storeCode: store,
@@ -199,7 +199,7 @@ export function createMagnitProvider({
     },
 
     async product(id, ctx) {
-      const store = await ctx.secrets.require("store");
+      const store = await chosenStore(ctx);
       const good = await goodDetails(id, store, ctx);
       const description = good.details.find(
         (detail) => detail.name === "Описание",
@@ -378,6 +378,17 @@ function toProduct(good: Good, store: string): Product {
     ...(imageUrl === undefined ? {} : { imageUrl }),
     available: good.quantity > 0 && good.isMissing !== true,
   };
+}
+
+async function chosenStore(ctx: ProviderContext): Promise<string> {
+  const store = await ctx.secrets.get("store");
+  if (store === undefined) {
+    throw new EcomError(
+      "auth_required",
+      "Choose a Magnit store with `ecom magnit store <code>`, or sign in with `ecom login magnit` to use the store of your delivery address",
+    );
+  }
+  return store;
 }
 
 function checkoutHeaders(store: string) {

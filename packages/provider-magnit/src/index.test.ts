@@ -59,6 +59,12 @@ function fixtureFile(method: string, url: URL, body: unknown): string {
   throw new Error(`No fixture for ${method} ${url.href}`);
 }
 
+const SIGN_IN: Record<string, unknown> = {
+  "/v1/auth/otp": { attemptId: "a" },
+  "/v1/auth/otp/check": { magnitIDCode: "m" },
+  "/v1/auth/token": { accessToken: "t", refreshToken: "r" },
+};
+
 function setup(env: Record<string, string> = { ECOM_MAGNIT_STORE: "777885" }) {
   const requests: Recorded[] = [];
   const fetch = async (input: string, init?: RequestInit) => {
@@ -67,6 +73,10 @@ function setup(env: Record<string, string> = { ECOM_MAGNIT_STORE: "777885" }) {
     const body =
       typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     requests.push({ method, url, headers: new Headers(init?.headers), body });
+    const signIn = SIGN_IN[url.pathname];
+    if (url.host === "id.magnit.ru" && signIn) {
+      return new Response(JSON.stringify(signIn));
+    }
     const file = new URL(fixtureFile(method, url, body), FIXTURES);
     return new Response(await readFile(file, "utf8"), {
       headers: { "content-type": "application/json" },
@@ -147,7 +157,35 @@ describe("magnit provider", () => {
 
     await expect(
       required(magnit, "search")({ text: "молоко" }, ctx),
-    ).rejects.toMatchObject({ code: "auth_required" });
+    ).rejects.toThrow("ecom magnit store <code>");
+  });
+
+  test("takes the store of the delivery address on sign-in", async () => {
+    const { magnit, ctx, requests } = setup({});
+    const saved = new Map<string, string>();
+    const writable = {
+      ...ctx,
+      secrets: {
+        ...ctx.secrets,
+        get: async (key: string) => saved.get(key),
+        set: async (key: string, value: string) => {
+          saved.set(key, value);
+        },
+      },
+    };
+    const answers = ["9990000000", "12345"];
+
+    await required(magnit, "login")(
+      async () => answers.shift() ?? "",
+      writable,
+      {},
+    );
+
+    expect(saved.get("store")).toBe("777885");
+    const opened = requests.find(
+      (request) => request.url.pathname === "/v1/checkout/preview",
+    );
+    expect(opened?.headers.get("authorization")).toBe("bearer t");
   });
 
   test("rejects a malformed cursor", async () => {
