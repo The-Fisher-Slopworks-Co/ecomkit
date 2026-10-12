@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   EcomError,
   money,
@@ -6,9 +5,9 @@ import {
   type Provider,
   type ProviderContext,
 } from "@ecomkit/core";
+import { Session, sessionSecrets } from "./session.ts";
 
 const API_URL = "https://middle-api.magnit.ru/";
-const APP_VERSION = "8.124.0";
 const DEFAULT_PAGE_SIZE = 20;
 const STORE_SEARCH_RADIUS_METERS = 3000;
 const EXPRESS = { storeType: "express", catalogType: "2" } as const;
@@ -75,23 +74,17 @@ interface MagnitOptions {
 }
 
 export function createMagnitProvider({
-  deviceId = randomUUID(),
+  deviceId,
 }: MagnitOptions = {}): Provider {
-  const headers = {
-    "user-agent": "okhttp/4.12.0",
-    "x-app-version": APP_VERSION,
-    "x-device-id": deviceId,
-    "x-device-platform": "Android",
-    "x-platform-version": "36",
-  };
+  const session = new Session(deviceId);
 
   function api(ctx: ProviderContext) {
     const http = ctx.http(API_URL);
     return {
-      get: <T>(path: string, query: Record<string, string>) =>
-        http.get<T>(path, { query, headers }),
-      post: <T>(path: string, body: unknown) =>
-        http.post<T>(path, { body, headers }),
+      get: async <T>(path: string, query: Record<string, string>) =>
+        http.get<T>(path, { query, headers: await session.headers(ctx) }),
+      post: async <T>(path: string, body: unknown) =>
+        http.post<T>(path, { body, headers: await session.headers(ctx) }),
     };
   }
 
@@ -101,10 +94,12 @@ export function createMagnitProvider({
     secrets: [
       {
         key: "store",
-        label:
-          "Magnit store code; `ecom magnit stores <lat> <lon>` lists stores that deliver there",
+        label: "Magnit store code, set with `ecom magnit store <code>`",
       },
+      ...sessionSecrets,
     ],
+
+    login: (ask, ctx) => session.signIn(ask, ctx),
 
     async search({ text, limit = DEFAULT_PAGE_SIZE, cursor }, ctx) {
       const offset = parseCursor(cursor);
@@ -143,6 +138,24 @@ export function createMagnitProvider({
     },
 
     commands: {
+      store: {
+        description: "Use the Magnit store <code> for search, cart and orders",
+        async run(args, ctx) {
+          const [code] = args;
+          if (args.length !== 1 || code === undefined || !/^\d+$/.test(code)) {
+            throw new EcomError(
+              "invalid_input",
+              "Usage: ecom magnit store <code>",
+            );
+          }
+          const store = await api(ctx).post<StoreResponse>(
+            "v1/stores-facade/store",
+            { externalId: { owner: "OWNER_MAGNIT", storeCode: code } },
+          );
+          await ctx.secrets.set("store", code);
+          return { code, address: store.address };
+        },
+      },
       stores: {
         description:
           "List Magnit stores that deliver near <lat> <lon>, nearest first",

@@ -165,6 +165,31 @@ describe("magnit provider", () => {
     });
   });
 
+  test("remembers a store after checking that it exists", async () => {
+    const { magnit, ctx, requests } = setup({});
+    const saved = new Map<string, string>();
+    const writable = {
+      ...ctx,
+      secrets: {
+        ...ctx.secrets,
+        set: async (key: string, value: string) => {
+          saved.set(key, value);
+        },
+      },
+    };
+
+    const chosen = await magnit.commands?.["store"]?.run(["777885"], writable);
+
+    expect(chosen).toEqual({
+      code: "777885",
+      address: "г Москва, ул Большая Татарская, д 36",
+    });
+    expect(saved.get("store")).toBe("777885");
+    expect(requests[0]?.body).toEqual({
+      externalId: { owner: "OWNER_MAGNIT", storeCode: "777885" },
+    });
+  });
+
   test.each([[[]], [["55.75"]], [["north", "37.62"]], [["95", "37.62"]]])(
     "rejects stores arguments %p",
     async (args) => {
