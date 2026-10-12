@@ -19,6 +19,8 @@ export interface SecretField {
   readonly label: string;
 }
 
+export type Ask = (label: string) => Promise<string>;
+
 export interface ProviderCommand {
   readonly description: string;
   run(args: readonly string[], ctx: ProviderContext): Promise<unknown>;
@@ -29,6 +31,8 @@ export interface Provider {
   readonly title: string;
   readonly secrets: readonly SecretField[];
   readonly commands?: Readonly<Record<string, ProviderCommand>>;
+
+  login?(ask: Ask, ctx: ProviderContext): Promise<void>;
 
   search?(query: SearchQuery, ctx: ProviderContext): Promise<Page<Product>>;
   product?(id: string, ctx: ProviderContext): Promise<Product>;

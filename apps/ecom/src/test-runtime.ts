@@ -41,11 +41,23 @@ const boardProvider: Provider = {
   },
 };
 
+const smsProvider: Provider = {
+  id: "sms",
+  title: "Shop with a one-time code login",
+  secrets: [{ key: "session", label: "Session token" }],
+  async login(ask, ctx) {
+    const phone = await ask("Phone");
+    const code = await ask(`Code sent to ${phone}`);
+    await ctx.secrets.set("session", `${phone}:${code}`);
+  },
+};
+
 export function testRuntime(keychain = memorySecretStore()): Runtime {
   return {
     providers: new Map([
       ["mock", createMockProvider()],
       ["board", boardProvider],
+      ["sms", smsProvider],
     ]),
     secrets: layeredSecretStore(envSecretStore({}), keychain),
     guard: new CheckoutGuard({

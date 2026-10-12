@@ -11,7 +11,7 @@ import {
   formatProduct,
   formatProducts,
 } from "./format.ts";
-import type { Runtime } from "./runtime.ts";
+import { providerContext, type Runtime } from "./runtime.ts";
 
 export const version = pkg.version;
 
@@ -258,14 +258,26 @@ async function login(
   deps: CliDeps,
 ): Promise<Output> {
   const provider = actions.getProvider(runtime, id);
-  for (const field of provider.secrets) {
-    const value = (await deps.readSecret(field.label)).trim();
+  const ask = async (label: string) => {
+    const value = (await deps.readSecret(label)).trim();
     if (value === "") {
-      throw new EcomError("invalid_input", `${field.label} is required`);
+      throw new EcomError("invalid_input", `${label} is required`);
     }
-    await runtime.secrets.set(id, field.key, value);
+    return value;
+  };
+  if (provider.login) {
+    await provider.login(ask, providerContext(runtime, provider));
+  } else {
+    for (const field of provider.secrets) {
+      await runtime.secrets.set(id, field.key, await ask(field.label));
+    }
   }
-  const stored = provider.secrets.map((field) => field.key);
+  const stored: string[] = [];
+  for (const field of provider.secrets) {
+    if ((await runtime.secrets.get(id, field.key)) !== undefined) {
+      stored.push(field.key);
+    }
+  }
   return {
     data: { provider: id, stored, backend: runtime.secrets.backend },
     text:

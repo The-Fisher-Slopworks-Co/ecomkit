@@ -101,4 +101,16 @@ describe("secrets", () => {
 
     await expect(secrets.require("token")).rejects.toThrow("ecom login ozon");
   });
+
+  test("lets a provider write and delete only its own keys", async () => {
+    const store = memoryStore();
+    const ozon = providerSecrets(store, "ozon");
+
+    await ozon.set("token", "abc");
+
+    expect(await store.get("ozon", "token")).toBe("abc");
+    expect(await providerSecrets(store, "avito").get("token")).toBeUndefined();
+    expect(await ozon.delete("token")).toBe(true);
+    expect(await ozon.get("token")).toBeUndefined();
+  });
 });

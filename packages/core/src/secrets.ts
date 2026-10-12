@@ -10,6 +10,8 @@ export interface SecretStore {
 export interface ProviderSecrets {
   get(key: string): Promise<string | undefined>;
   require(key: string): Promise<string>;
+  set(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<boolean>;
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -134,5 +136,7 @@ export function providerSecrets(
       }
       return value;
     },
+    set: (key, value) => store.set(provider, key, value),
+    delete: (key) => store.delete(provider, key),
   };
 }
