@@ -27,7 +27,14 @@ export interface CheckoutPreviewResponse {
   readonly deliveryInfo?: {
     readonly store?: { readonly storeCode: string };
   };
-  readonly suborders: readonly { readonly items: readonly PreviewItem[] }[];
+  readonly restrictions?: readonly {
+    readonly title: string;
+    readonly description: string;
+  }[];
+  readonly suborders: readonly {
+    readonly id: string;
+    readonly items: readonly PreviewItem[];
+  }[];
   readonly summary: {
     readonly totalFinalPrice: number;
     readonly prices: readonly {

@@ -1,6 +1,7 @@
 import {
   EcomError,
   money,
+  previewDigest,
   type Product,
   type Provider,
   type ProviderContext,
@@ -13,6 +14,12 @@ import {
   weightedTitle,
   type CheckoutPreviewResponse,
 } from "./cart.ts";
+import {
+  checkoutCartId,
+  orderRequest,
+  toCheckoutPreview,
+  type CheckoutResponse,
+} from "./checkout.ts";
 import {
   toOrder,
   type OrderInfoResponse,
@@ -99,14 +106,27 @@ export function createMagnitProvider({
     const store = await ctx.secrets.require("store");
     return session.authorized(ctx, (headers) =>
       ctx.http(API_URL).get<CheckoutPreviewResponse>("v1/checkout/preview", {
-        headers: {
-          ...headers,
-          "x-service": EXPRESS.storeType,
-          "x-store-code": store,
-          "x-delivery-type": "delivery",
-        },
+        headers: { ...headers, ...checkoutHeaders(store) },
       }),
     );
+  }
+
+  async function checkout(ctx: ProviderContext) {
+    const cart = await preview(ctx);
+    const cartId = checkoutCartId(cart);
+    const details = await session.authorized(ctx, (headers) =>
+      ctx
+        .http(API_URL)
+        .get<CheckoutResponse>(`v1/checkout/${encodeURIComponent(cartId)}`, {
+          headers: { ...headers, ...checkoutHeaders(deliveryStore(cart)) },
+        }),
+    );
+    return {
+      cartId,
+      store: deliveryStore(cart),
+      details,
+      preview: toCheckoutPreview(cart, details),
+    };
   }
 
   function api(ctx: ProviderContext) {
@@ -228,6 +248,38 @@ export function createMagnitProvider({
       return toCart(await preview(ctx));
     },
 
+    checkoutPreview: async (ctx) => (await checkout(ctx)).preview,
+
+    async placeOrder(confirmed, ctx) {
+      const { cartId, store, details, preview: current } = await checkout(ctx);
+      if (previewDigest(current) !== previewDigest(confirmed)) {
+        throw new EcomError(
+          "confirmation_required",
+          "The order changed after it was confirmed; run checkout again",
+        );
+      }
+      const placed = await session.authorized(ctx, (headers) =>
+        ctx.http(API_URL).post<{
+          orderNumber: string;
+        }>(`v1/checkout/${encodeURIComponent(cartId)}/order`, {
+          headers: { ...headers, ...checkoutHeaders(store) },
+          body: orderRequest(details),
+        }),
+      );
+      try {
+        return toOrder(await orderInfo(placed.orderNumber, ctx));
+      } catch {
+        return {
+          id: placed.orderNumber,
+          status: "created",
+          createdAt: new Date().toISOString(),
+          items: current.items,
+          total: current.total,
+          ...(current.address ? { address: current.address } : {}),
+        };
+      }
+    },
+
     async orders(ctx) {
       const [active, history] = await Promise.all([
         authorizedGet<OrdersListResponse>("v2/orders/active/list", ctx),
@@ -325,6 +377,14 @@ function toProduct(good: Good, store: string): Product {
     url: productUrl(good.id, store),
     ...(imageUrl === undefined ? {} : { imageUrl }),
     available: good.quantity > 0 && good.isMissing !== true,
+  };
+}
+
+function checkoutHeaders(store: string) {
+  return {
+    "x-service": EXPRESS.storeType,
+    "x-store-code": store,
+    "x-delivery-type": "delivery",
   };
 }
 
