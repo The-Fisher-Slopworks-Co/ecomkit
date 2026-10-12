@@ -15,7 +15,11 @@ interface PreviewItem {
   readonly qnty: number;
   readonly isAvailable: boolean;
   readonly totalFinalPrice: number;
-  readonly volume: { readonly price: number };
+  readonly volume: {
+    readonly price: number;
+    readonly unit: string;
+    readonly value: number;
+  };
   readonly image?: { readonly prefixUrl: string; readonly postfixUrl: string };
 }
 
@@ -44,6 +48,10 @@ export function deliveryStore(preview: CheckoutPreviewResponse): string {
   return store;
 }
 
+export function weightedTitle(title: string, grams: number): string {
+  return `${title}, ${grams} г`;
+}
+
 export function productUrl(id: string, store: string): string {
   const url = new URL(`https://magnit.ru/product/${id}`);
   url.search = new URLSearchParams({
@@ -60,19 +68,22 @@ export function toCart(preview: CheckoutPreviewResponse): Cart {
     .flatMap((suborder) => suborder.items)
     .filter((item) => item.type === "product" && item.isAvailable)
     .map((item) => {
+      const weighted = item.volume.unit === "weight";
       const imageUrl = item.image
         ? `${item.image.prefixUrl}${item.image.postfixUrl}`
         : "";
       return {
         product: {
           id: item.goodId,
-          title: item.title,
+          title: weighted
+            ? weightedTitle(item.title, item.volume.value)
+            : item.title,
           price: money(item.volume.price),
           url: productUrl(item.goodId, store),
           ...(imageUrl ? { imageUrl } : {}),
           available: true,
         },
-        quantity: item.qnty,
+        quantity: weighted ? item.qnty / item.volume.value : item.qnty,
         total: money(item.totalFinalPrice),
       };
     });
