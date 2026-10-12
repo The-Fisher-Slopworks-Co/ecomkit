@@ -5,12 +5,18 @@ import {
   type Provider,
   type ProviderContext,
 } from "@ecomkit/core";
+import {
+  EXPRESS,
+  deliveryStore,
+  productUrl,
+  toCart,
+  type CheckoutPreviewResponse,
+} from "./cart.ts";
 import { Session, sessionSecrets } from "./session.ts";
 
 const API_URL = "https://middle-api.magnit.ru/";
 const DEFAULT_PAGE_SIZE = 20;
 const STORE_SEARCH_RADIUS_METERS = 3000;
-const EXPRESS = { storeType: "express", catalogType: "2" } as const;
 
 interface Good {
   readonly id: string;
@@ -78,6 +84,20 @@ export function createMagnitProvider({
 }: MagnitOptions = {}): Provider {
   const session = new Session(deviceId);
 
+  async function preview(ctx: ProviderContext) {
+    const store = await ctx.secrets.require("store");
+    return session.authorized(ctx, (headers) =>
+      ctx.http(API_URL).get<CheckoutPreviewResponse>("v1/checkout/preview", {
+        headers: {
+          ...headers,
+          "x-service": EXPRESS.storeType,
+          "x-store-code": store,
+          "x-delivery-type": "delivery",
+        },
+      }),
+    );
+  }
+
   function api(ctx: ProviderContext) {
     const http = ctx.http(API_URL);
     return {
@@ -99,7 +119,12 @@ export function createMagnitProvider({
       ...sessionSecrets,
     ],
 
-    login: (ask, ctx) => session.signIn(ask, ctx),
+    async login(ask, ctx) {
+      await session.signIn(ask, ctx);
+      if ((await ctx.secrets.get("store")) === undefined) return;
+      const store = (await preview(ctx)).deliveryInfo?.store?.storeCode;
+      if (store) await ctx.secrets.set("store", store);
+    },
 
     async search({ text, limit = DEFAULT_PAGE_SIZE, cursor }, ctx) {
       const offset = parseCursor(cursor);
@@ -135,6 +160,35 @@ export function createMagnitProvider({
         ...(brand ? { brand } : {}),
         ...(description ? { description } : {}),
       };
+    },
+
+    cart: async (ctx) => toCart(await preview(ctx)),
+
+    async setCartItem(productId, quantity, ctx) {
+      if (!Number.isSafeInteger(quantity) || quantity < 0) {
+        throw new EcomError(
+          "invalid_input",
+          `Quantity must be a non-negative integer, got ${quantity}`,
+        );
+      }
+      const store = deliveryStore(await preview(ctx));
+      await session.authorized(ctx, (headers) =>
+        ctx.http(API_URL).request("PUT", "v2/carts/lite", {
+          headers,
+          query: { service: EXPRESS.storeType, storeCode: store },
+          body: {
+            items: [
+              {
+                goodId: productId,
+                qnty: quantity,
+                goodService: EXPRESS.storeType,
+                goodStoreCode: store,
+              },
+            ],
+          },
+        }),
+      );
+      return toCart(await preview(ctx));
     },
 
     commands: {
@@ -204,12 +258,6 @@ export function createMagnitProvider({
 function toProduct(good: Good, store: string): Product {
   const imageUrl = good.gallery[0]?.url;
   const oldPrice = good.promotion.oldPrice;
-  const url = new URL(`https://magnit.ru/product/${good.id}`);
-  url.search = new URLSearchParams({
-    shopCode: store,
-    shopType: EXPRESS.storeType,
-    catalogType: EXPRESS.catalogType,
-  }).toString();
   return {
     id: good.id,
     title: good.name,
@@ -217,7 +265,7 @@ function toProduct(good: Good, store: string): Product {
     ...(oldPrice === null || oldPrice <= good.price
       ? {}
       : { oldPrice: money(oldPrice) }),
-    url: url.toString(),
+    url: productUrl(good.id, store),
     ...(imageUrl === undefined ? {} : { imageUrl }),
     available: good.quantity > 0 && good.isMissing !== true,
   };

@@ -31,6 +31,12 @@ function fixtureFile(method: string, url: URL, body: unknown): string {
     const { externalId } = body as { externalId: { storeCode: string } };
     return `store-${externalId.storeCode}.json`;
   }
+  if (method === "GET" && url.pathname === "/v1/checkout/preview") {
+    return "checkout-preview.json";
+  }
+  if (method === "PUT" && url.pathname === "/v2/carts/lite") {
+    return "carts-lite.json";
+  }
   const good = /^\/v2\/goods\/(\d+)\/stores\/\d+$/.exec(url.pathname);
   if (method === "GET" && good) return `goods-${good[1]}.json`;
   throw new Error(`No fixture for ${method} ${url.href}`);
@@ -188,6 +194,45 @@ describe("magnit provider", () => {
     expect(requests[0]?.body).toEqual({
       externalId: { owner: "OWNER_MAGNIT", storeCode: "777885" },
     });
+  });
+
+  test("reads the cart of the signed-in account", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+
+    const cart = await required(magnit, "cart")(ctx);
+
+    expect(cart.items).toHaveLength(2);
+    expect(requests[0]?.headers.get("authorization")).toBe("bearer t");
+    expect(requests[0]?.headers.get("x-service")).toBe("express");
+    expect(requests[0]?.headers.get("x-store-code")).toBe("777885");
+  });
+
+  test("sets an absolute quantity in the delivery store's cart", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+
+    await required(magnit, "setCartItem")("1000049786", 3, ctx);
+
+    const put = requests.find((request) => request.method === "PUT");
+    expect(put?.url.search).toBe("?service=express&storeCode=777885");
+    expect(put?.body).toEqual({
+      items: [
+        {
+          goodId: "1000049786",
+          qnty: 3,
+          goodService: "express",
+          goodStoreCode: "777885",
+        },
+      ],
+    });
+    await expect(
+      required(magnit, "setCartItem")("1000049786", 1.5, ctx),
+    ).rejects.toMatchObject({ code: "invalid_input" });
   });
 
   test.each([[[]], [["55.75"]], [["north", "37.62"]], [["95", "37.62"]]])(
