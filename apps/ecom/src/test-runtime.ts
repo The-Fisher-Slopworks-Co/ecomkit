@@ -45,9 +45,9 @@ const smsProvider: Provider = {
   id: "sms",
   title: "Shop with a one-time code login",
   secrets: [{ key: "session", label: "Session token" }],
-  async login(ask, ctx) {
-    const phone = await ask("Phone");
-    const code = await ask(`Code sent to ${phone}`);
+  async login(ask, ctx, { codeSent }) {
+    const phone = codeSent ? "sent" : await ask("Phone", { visible: true });
+    const code = await ask(`Code sent to ${phone}`, { visible: true });
     await ctx.secrets.set("session", `${phone}:${code}`);
   },
 };

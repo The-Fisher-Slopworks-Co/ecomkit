@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import { EcomError, formatMoney } from "@ecomkit/core";
+import { EcomError, formatMoney, type AskOptions } from "@ecomkit/core";
 import pkg from "../package.json" with { type: "json" };
 import * as actions from "./actions.ts";
 import { errorPayload } from "./errors.ts";
@@ -19,6 +19,7 @@ export interface CliDeps {
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
   readonly readSecret: (label: string) => Promise<string>;
+  readonly readLine: (label: string) => Promise<string>;
   readonly createRuntime: () => Promise<Runtime>;
   readonly serveMcp: (runtime: Runtime) => Promise<void>;
 }
@@ -36,6 +37,7 @@ Usage:
   ecom <provider> <command> [args] [--json]
   ecom providers               list providers and what they support
   ecom login <provider>        store the provider's secrets in the keychain
+    [--code]                   enter a code that was already sent, without a new one
   ecom logout <provider>       remove them
   ecom doctor                  check the runtime, secret store and limits
   ecom mcp                     serve MCP over stdio
@@ -64,6 +66,7 @@ function parse(argv: readonly string[]) {
       qty: { type: "string" },
       limit: { type: "string" },
       cursor: { type: "string" },
+      code: { type: "boolean" },
     },
   });
 }
@@ -132,7 +135,7 @@ async function dispatch(
     case "doctor":
       return doctor(runtime);
     case "login":
-      return login(runtime, required(rest[0], "provider"), deps);
+      return login(runtime, required(rest[0], "provider"), deps, flags);
     case "logout":
       return logout(runtime, required(rest[0], "provider"));
     default:
@@ -256,17 +259,23 @@ async function login(
   runtime: Runtime,
   id: string,
   deps: CliDeps,
+  flags: Flags,
 ): Promise<Output> {
   const provider = actions.getProvider(runtime, id);
-  const ask = async (label: string) => {
-    const value = (await deps.readSecret(label)).trim();
+  const ask = async (label: string, options?: AskOptions) => {
+    const read = options?.visible ? deps.readLine : deps.readSecret;
+    const value = (await read(label)).trim();
     if (value === "") {
       throw new EcomError("invalid_input", `${label} is required`);
     }
     return value;
   };
   if (provider.login) {
-    await provider.login(ask, providerContext(runtime, provider));
+    await provider.login(ask, providerContext(runtime, provider), {
+      codeSent: flags.code === true,
+    });
+  } else if (flags.code) {
+    throw new EcomError("invalid_input", `${id} does not sign in with a code`);
   } else {
     for (const field of provider.secrets) {
       await runtime.secrets.set(id, field.key, await ask(field.label));

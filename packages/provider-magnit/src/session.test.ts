@@ -60,15 +60,18 @@ describe("magnit session", () => {
       "id.magnit.ru/v1/auth/otp/check": [[200, { magnitIDCode: "mid-1" }]],
       "id.magnit.ru/v1/auth/token": [[200, tokens(1)]],
     });
-    const asked: string[] = [];
+    const asked: [string, boolean | undefined][] = [];
     const answers = ["+7 (999) 000-00-00", "12345"];
 
-    await new Session().signIn(async (label) => {
-      asked.push(label);
+    await new Session().signIn(async (label, options) => {
+      asked.push([label, options?.visible]);
       return answers.shift() ?? "";
     }, ctx);
 
-    expect(asked).toEqual(["Phone number", "Code from SMS"]);
+    expect(asked).toEqual([
+      ["Phone number", true],
+      ["Code from SMS sent to +79990000000", true],
+    ]);
     expect(calls.map((call) => call.body)).toEqual([
       {
         aud: "loyalty-mobile",
@@ -84,7 +87,10 @@ describe("magnit session", () => {
       },
       { aud: "loyalty-mobile", magnitIdCode: "mid-1" },
     ]);
-    expect(calls[0]?.headers.get("x-device-tag")).toBeTruthy();
+    const tags = new Set(calls.map((call) => call.headers.get("x-device-tag")));
+    expect([...tags]).toHaveLength(1);
+    expect([...tags][0]).toBeTruthy();
+    expect(values.has("signIn")).toBe(false);
     expect(calls[0]?.headers.get("x-device-id")).toBe(
       values.get("device") ?? "",
     );
@@ -109,6 +115,73 @@ describe("magnit session", () => {
       "device-1",
       "device-1",
     ]);
+  });
+
+  test("asks for the code again when Magnit rejects it", async () => {
+    const wrong: Reply = [400, { message: "Неверный код" }];
+    const { ctx, calls, values } = setup({
+      "id.magnit.ru/v1/auth/otp": [[200, { attemptId: "a" }]],
+      "id.magnit.ru/v1/auth/otp/check": [wrong, [200, { magnitIDCode: "m" }]],
+      "id.magnit.ru/v1/auth/token": [[200, tokens(1)]],
+    });
+    const asked: string[] = [];
+    const answers = ["9990000000", "11111", "22222"];
+
+    await new Session().signIn(async (label) => {
+      asked.push(label);
+      return answers.shift() ?? "";
+    }, ctx);
+
+    expect(asked.at(-1)).toBe(
+      "Magnit rejected the code (Неверный код), enter it again",
+    );
+    expect(calls.filter((call) => call.path.endsWith("/otp"))).toHaveLength(1);
+    expect(values.get("accessToken")).toBe("access-1");
+  });
+
+  test("keeps the sent code for --code after three wrong tries", async () => {
+    const wrong: Reply = [400, { message: "Неверный код" }];
+    const { ctx, values } = setup({
+      "id.magnit.ru/v1/auth/otp": [[200, { attemptId: "a" }]],
+      "id.magnit.ru/v1/auth/otp/check": [wrong, wrong, wrong],
+    });
+
+    await expect(
+      new Session().signIn(async () => "9990000000", ctx),
+    ).rejects.toThrow("ecom login magnit --code");
+    expect(JSON.parse(values.get("signIn") ?? "{}")).toMatchObject({
+      attemptId: "a",
+      phone: "79990000000",
+    });
+  });
+
+  test("enters a code that was already sent without sending another", async () => {
+    const pending = { attemptId: "a", phone: "79990000000", deviceTag: "tag" };
+    const { ctx, calls, values } = setup(
+      {
+        "id.magnit.ru/v1/auth/otp/check": [[200, { magnitIDCode: "m" }]],
+        "id.magnit.ru/v1/auth/token": [[200, tokens(1)]],
+      },
+      { device: "device-1", signIn: JSON.stringify(pending) },
+    );
+
+    await new Session().signIn(async () => "12345", ctx, { codeSent: true });
+
+    expect(calls.map((call) => call.path)).toEqual([
+      "id.magnit.ru/v1/auth/otp/check",
+      "id.magnit.ru/v1/auth/token",
+    ]);
+    expect(calls[0]?.headers.get("x-device-tag")).toBe("tag");
+    expect(calls[0]?.body).toMatchObject({ attemptId: "a", code: "12345" });
+    expect(values.has("signIn")).toBe(false);
+  });
+
+  test("asks to send a code when none is waiting", async () => {
+    const { ctx } = setup({});
+
+    await expect(
+      new Session().signIn(async () => "12345", ctx, { codeSent: true }),
+    ).rejects.toThrow("without --code");
   });
 
   test.each(["123", "+7 495 000-00-00", "8 999 000 00 0"])(

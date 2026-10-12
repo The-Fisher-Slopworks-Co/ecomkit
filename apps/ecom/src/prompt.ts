@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import { createInterface as createQuestions } from "node:readline/promises";
 import { EcomError } from "@ecomkit/core";
 
 let piped: { close(): void; lines: AsyncIterator<string> } | undefined;
@@ -18,6 +19,17 @@ async function readPipedLine(): Promise<string> {
 export function closePrompt(): void {
   piped?.close();
   piped = undefined;
+}
+
+export async function readLine(label: string): Promise<string> {
+  const { stdin, stderr } = process;
+  if (!stdin.isTTY) return readPipedLine();
+  const reader = createQuestions({ input: stdin, output: stderr });
+  try {
+    return await reader.question(`${label}: `);
+  } finally {
+    reader.close();
+  }
 }
 
 export function readSecret(label: string): Promise<string> {
