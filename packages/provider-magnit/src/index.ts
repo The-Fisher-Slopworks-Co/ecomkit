@@ -13,11 +13,17 @@ import {
   weightedTitle,
   type CheckoutPreviewResponse,
 } from "./cart.ts";
+import {
+  toOrder,
+  type OrderInfoResponse,
+  type OrdersListResponse,
+} from "./orders.ts";
 import { Session, sessionSecrets } from "./session.ts";
 
 const API_URL = "https://middle-api.magnit.ru/";
 const DEFAULT_PAGE_SIZE = 20;
 const STORE_SEARCH_RADIUS_METERS = 3000;
+const RECENT_ORDERS = 10;
 
 interface Good {
   readonly id: string;
@@ -113,6 +119,23 @@ export function createMagnitProvider({
     };
   }
 
+  function authorizedGet<T>(
+    path: string,
+    ctx: ProviderContext,
+    query: Record<string, string> = {},
+  ) {
+    return session.authorized(ctx, (headers) =>
+      ctx.http(API_URL).get<T>(path, { query, headers }),
+    );
+  }
+
+  function orderInfo(id: string, ctx: ProviderContext) {
+    return authorizedGet<OrderInfoResponse>(
+      `v2/orders/info/${encodeURIComponent(id)}`,
+      ctx,
+    );
+  }
+
   function goodDetails(id: string, store: string, ctx: ProviderContext) {
     return api(ctx).get<GoodDetails>(
       `v2/goods/${encodeURIComponent(id)}/stores/${encodeURIComponent(store)}`,
@@ -204,6 +227,25 @@ export function createMagnitProvider({
       );
       return toCart(await preview(ctx));
     },
+
+    async orders(ctx) {
+      const [active, history] = await Promise.all([
+        authorizedGet<OrdersListResponse>("v2/orders/active/list", ctx),
+        authorizedGet<OrdersListResponse>("v2/orders/history/list", ctx, {
+          limit: String(RECENT_ORDERS),
+          page: "1",
+        }),
+      ]);
+      const ids = [
+        ...new Set(
+          [...active.items, ...history.items].map((order) => order.orderId),
+        ),
+      ].slice(0, RECENT_ORDERS);
+      const infos = await Promise.all(ids.map((id) => orderInfo(id, ctx)));
+      return { items: infos.map(toOrder) };
+    },
+
+    order: async (id, ctx) => toOrder(await orderInfo(id, ctx)),
 
     commands: {
       store: {

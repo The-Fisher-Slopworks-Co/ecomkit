@@ -37,6 +37,14 @@ function fixtureFile(method: string, url: URL, body: unknown): string {
   if (method === "PUT" && url.pathname === "/v2/carts/lite") {
     return "carts-lite.json";
   }
+  if (method === "GET" && url.pathname === "/v2/orders/active/list") {
+    return "orders-active.json";
+  }
+  if (method === "GET" && url.pathname === "/v2/orders/history/list") {
+    return "orders-history.json";
+  }
+  const order = /^\/v2\/orders\/info\/([\w-]+)$/.exec(url.pathname);
+  if (method === "GET" && order) return `order-${order[1]}.json`;
   const good = /^\/v2\/goods\/(\d+)\/stores\/\d+$/.exec(url.pathname);
   if (method === "GET" && good) return `goods-${good[1]}.json`;
   throw new Error(`No fixture for ${method} ${url.href}`);
@@ -262,6 +270,56 @@ describe("magnit provider", () => {
     );
     const put = requests.find((request) => request.method === "PUT");
     expect(put?.body).toMatchObject({ items: [{ qnty: 0 }] });
+  });
+
+  test("lists recent orders, active ones first, without duplicates", async () => {
+    const { magnit, ctx, requests } = setup({ ECOM_MAGNIT_ACCESSTOKEN: "t" });
+
+    const page = await required(magnit, "orders")(ctx);
+
+    expect(
+      page.items.map((order) => [order.id, order.status, order.total]),
+    ).toEqual([
+      ["fy-CM000000002", "in_progress", money(12499)],
+      ["fy-CM000000001", "delivered", money(49388)],
+    ]);
+    const history = requests.find(
+      (request) => request.url.pathname === "/v2/orders/history/list",
+    );
+    expect(history?.url.search).toBe("?limit=10&page=1");
+    expect(history?.headers.get("authorization")).toBe("bearer t");
+  });
+
+  test("reads an order with weighted goods by weight", async () => {
+    const { magnit, ctx } = setup({ ECOM_MAGNIT_ACCESSTOKEN: "t" });
+
+    const order = await required(magnit, "order")("fy-CM000000001", ctx);
+
+    expect(order).toMatchObject({
+      createdAt: "2026-10-01T10:15:00+03:00",
+      address: { line: "Москва, Тверская улица, 1" },
+    });
+    expect(
+      order.items.map((item) => [
+        item.product.title,
+        item.quantity,
+        item.product.price,
+        item.total,
+      ]),
+    ).toEqual([
+      [
+        "Молоко Северная долина ультрапастеризованное 3.2% 950г",
+        2,
+        money(12499),
+        money(24998),
+      ],
+      [
+        "Десерт глазированный Акконд Ломтишка, 300 г",
+        1,
+        money(24390),
+        money(24390),
+      ],
+    ]);
   });
 
   test.each([[[]], [["55.75"]], [["north", "37.62"]], [["95", "37.62"]]])(
