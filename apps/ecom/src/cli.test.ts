@@ -104,11 +104,24 @@ describe("ecom CLI", () => {
       providers: [
         { id: "mock", secrets: {} },
         { id: "board", secrets: { token: true } },
+        { id: "sms", secrets: { session: false } },
       ],
     });
 
     expect(await cli.run("board", "search", "sofa")).toBe(0);
     await cli.run("logout", "board");
+    expect(keychain.values.size).toBe(0);
+  });
+
+  test("lets a provider run its own login and logs it out", async () => {
+    const keychain = memorySecretStore();
+    const cli = harness(testRuntime(keychain), ["79990000000", "1234"]);
+
+    expect(await cli.run("login", "sms", "--json")).toBe(0);
+    expect(cli.json()).toMatchObject({ provider: "sms", stored: ["session"] });
+    expect(keychain.values.get("sms/session")).toBe("79990000000:1234");
+
+    await cli.run("logout", "sms");
     expect(keychain.values.size).toBe(0);
   });
 
