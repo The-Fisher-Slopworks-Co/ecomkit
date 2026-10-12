@@ -1,16 +1,17 @@
 # ecomkit
 
-> **English:** ecomkit connects AI agents to Russian e-commerce and delivery
-> services (Ozon, Samokat, Avito, …) through one CLI, `ecom`, which also runs
-> as an MCP server. Checkout always needs explicit confirmation and respects
-> spending limits. The rest of this README is in Russian.
+> **English:** `ecom` lets an AI agent search, fill a cart and order from
+> Russian shops and delivery services, from the command line or over MCP. Every
+> order needs your confirmation and stays within spending limits you set. The
+> rest of this README is in Russian.
 
-Интеграции с e-commerce и доставками для AI-агентов: один CLI `ecom` и
-MCP-сервер поверх общих адаптеров.
+`ecom` даёт AI-агенту искать товары, собирать корзину и оформлять заказы в
+российских магазинах и доставках. Работает как CLI и как MCP-сервер. Любой
+заказ требует вашего подтверждения и укладывается в лимиты трат.
 
 ## Установка
 
-Нужен Node ≥ 20.19 или Bun.
+Нужен Node 20.19+ или Bun.
 
 ```bash
 npm install -g @slopworks/ecomkit
@@ -20,70 +21,47 @@ ecom doctor
 ## Использование
 
 ```bash
-ecom <provider> <команда> [аргументы] [--json]
-
-ecom mock search молоко --json
+ecom mock search молоко
 ecom mock product milk-1
 ecom <provider> add <id> --qty 2
-ecom <provider> checkout       # покажет итог и код подтверждения
-ecom <provider> checkout --confirm <код>
-
-ecom login <provider>          # сохранить токены в системный keychain
-ecom doctor                    # окружение, хранилище секретов, лимиты
-ecom mcp                       # MCP-сервер по stdio
+ecom <provider> checkout
 ```
 
-Команды провайдера: `search`, `product`, `cart`, `add`, `remove`, `checkout`,
-`orders`, `order`. Провайдер может не поддерживать часть из них (например, у
-Авито нет корзины) и добавлять свои.
+`--json` выводит результат в JSON, `ecom --help` покажет все команды.
+Токены сервиса сохраняются в системный keychain командой
+`ecom login <provider>`; без keychain их можно передать переменными
+`ECOM_<PROVIDER>_<KEY>`.
 
-`mock` — тестовый провайдер на фикстурах: корзина и заказы живут в памяти
-процесса, поэтому полный сценарий покупки работает внутри `ecom mcp`.
+Подключить к Claude Code как MCP-сервер:
 
-### MCP
+```bash
+claude mcp add ecom -- ecom mcp
+```
+
+## Покупки
+
+`checkout` сначала показывает состав заказа, сумму и одноразовый код. Заказ
+оформляется, только когда вы передаёте этот код обратно. Код действует 10
+минут и перестаёт подходить, если корзина или адрес изменились.
+
+По умолчанию можно потратить не больше 5 000 ₽ за заказ и 10 000 ₽ за сутки.
+Лимиты задаются в рублях в `~/.config/ecomkit/config.json`:
 
 ```json
-{ "mcpServers": { "ecom": { "command": "ecom", "args": ["mcp"] } } }
+{ "limits": { "perOrder": 3000, "perDay": 8000 } }
 ```
 
-Девять тулов с параметром `provider`: `providers`, `search`, `product`,
-`cart`, `cart_set`, `checkout`, `orders`, `order` и `command` для команд
-конкретного провайдера. `checkout` и `command` помечены как
-`destructiveHint`.
-
-## Безопасность покупок
-
-- Заказ оформляется в два шага: сначала `checkout` возвращает итог и код,
-  заказ создаётся только повторным вызовом с этим кодом. Код одноразовый,
-  действует 10 минут и привязан к составу корзины, сумме и адресу; новый
-  предпросмотр отменяет прежние коды.
-- Лимиты трат: на один заказ и за последние 24 часа. По умолчанию 5 000 ₽ и
-  10 000 ₽; задаются в `~/.config/ecomkit/config.json`
-  (`{ "limits": { "perOrder": 3000, "perDay": 8000 } }`, в рублях).
-  Переменные `ECOM_LIMIT_PER_ORDER` и `ECOM_LIMIT_PER_DAY` могут их только
-  понизить.
-- История трат и выданные коды лежат в `~/.local/state/ecomkit/guard.json`;
-  параллельные покупки из разных процессов проходят по одной. Если сервис
-  явно отклонил заказ, сумма не учитывается; если исход неизвестен (таймаут,
-  ошибка 5xx, обрыв), сумма учитывается в лимите 24 часа — проверьте заказы
-  у сервиса.
-- Лимиты защищают от ошибок агента, а не от агента с полным доступом к
-  shell: такой агент может изменить конфиг сам.
-- Секреты хранятся в системном keychain (Bun.secrets или `@napi-rs/keyring`).
-  Переменные вида `ECOM_<PROVIDER>_<KEY>` имеют приоритет.
+Лимиты защищают от ошибок агента. От агента, которому доступен ваш shell, они
+не спасут: он может поменять конфиг сам.
 
 ## Разработка
 
-Нужны [Bun](https://bun.sh) и [uv](https://docs.astral.sh/uv/) (для
-`bun run reuse`).
+Нужны [Bun](https://bun.sh) и [uv](https://docs.astral.sh/uv/).
 
 ```bash
 bun install
 bun run check
-bun run ecom -- mock search молоко
 ```
-
-Устройство репозитория и правила — в [CLAUDE.md](CLAUDE.md).
 
 ## License
 
