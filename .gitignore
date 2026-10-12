@@ -14,3 +14,5 @@ coverage
 .DS_Store
 *.swp
 .claude/worktrees
+apps/ecom/README.md
+apps/ecom/LICENSE

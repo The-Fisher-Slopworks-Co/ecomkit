@@ -1,0 +1,36 @@
+{
+  "name": "@slopworks/ecomkit",
+  "version": "0.1.0",
+  "description": "E-commerce and delivery integrations for AI agents: one CLI and MCP server",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/The-Fisher-Slopworks-Co/ecomkit.git",
+    "directory": "apps/ecom"
+  },
+  "bin": {
+    "ecom": "dist/ecom.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "bun build src/main.ts --target=node --format=esm --external @napi-rs/keyring --outfile dist/ecom.js",
+    "smoke": "node scripts/smoke.mjs",
+    "prepack": "bun run build && cp ../../README.md ../../LICENSE .",
+    "postpack": "rm README.md LICENSE"
+  },
+  "optionalDependencies": {
+    "@napi-rs/keyring": "^2.1.1"
+  },
+  "devDependencies": {
+    "@ecomkit/core": "workspace:*",
+    "@ecomkit/provider-mock": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.6"
+  }
+}

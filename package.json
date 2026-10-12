@@ -11,7 +11,7 @@
   "scripts": {
     "ecom": "bun apps/ecom/src/main.ts",
     "build": "bun run --cwd apps/ecom build",
-    "smoke": "node scripts/smoke.mjs",
+    "smoke": "bun run --cwd apps/ecom smoke",
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "lint": "oxlint",

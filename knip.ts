@@ -6,6 +6,10 @@ const config: KnipConfig = {
       entry: ["src/**/*.test.ts"],
       project: ["src/**/*.ts"],
     },
+    "apps/ecom": {
+      entry: ["src/main.ts", "src/**/*.test.ts", "scripts/*.mjs"],
+      project: ["src/**/*.ts", "scripts/*.mjs"],
+    },
   },
   ignoreBinaries: ["uvx"],
 };
