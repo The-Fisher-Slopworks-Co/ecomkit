@@ -1,0 +1,16 @@
+node_modules
+dist
+*.tgz
+coverage
+*.lcov
+*.log
+.env
+.env.*.local
+.env.local
+.cache
+*.tsbuildinfo
+.idea
+.vscode
+.DS_Store
+*.swp
+.claude/worktrees
