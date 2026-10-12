@@ -1,0 +1,38 @@
+[
+  {
+    "id": "milk-1",
+    "title": "Молоко 3,2% 930 мл",
+    "brand": "Простоквашино",
+    "price": { "amount": 12990, "currency": "RUB" },
+    "available": true
+  },
+  {
+    "id": "milk-2",
+    "title": "Молоко овсяное 1 л",
+    "brand": "Nemoloko",
+    "price": { "amount": 18990, "currency": "RUB" },
+    "oldPrice": { "amount": 21990, "currency": "RUB" },
+    "available": true
+  },
+  {
+    "id": "bread-1",
+    "title": "Хлеб Бородинский 400 г",
+    "brand": "Коломенский",
+    "price": { "amount": 8990, "currency": "RUB" },
+    "available": true
+  },
+  {
+    "id": "coffee-1",
+    "title": "Кофе в зёрнах 1 кг",
+    "brand": "Lavazza",
+    "price": { "amount": 219900, "currency": "RUB" },
+    "available": true
+  },
+  {
+    "id": "cheese-1",
+    "title": "Сыр Российский 200 г",
+    "brand": "Брест-Литовск",
+    "price": { "amount": 24990, "currency": "RUB" },
+    "available": false
+  }
+]
