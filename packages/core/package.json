@@ -1,0 +1,10 @@
+{
+  "name": "@ecomkit/core",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "exports": "./src/index.ts",
+  "optionalDependencies": {
+    "@napi-rs/keyring": "^2.1.1"
+  }
+}

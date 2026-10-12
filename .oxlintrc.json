@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "rules": {
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "Bun",
+        "message": "Runtime code must run on Node ≥ 20 as well; feature-detect through globalThis."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["bun", "bun:*"],
+            "message": "Runtime code must run on Node ≥ 20 as well."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["node_modules", "dist"]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "ecomkit",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "packageManager": "bun@1.4.2",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "ecom": "bun apps/ecom/src/main.ts",
+    "build": "bun run --cwd apps/ecom build",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "lint": "oxlint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "knip": "knip",
+    "reuse": "uvx --from 'reuse[charset-normalizer]' reuse lint",
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run reuse && bun run test",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@types/bun": "~1.4.3",
+    "@types/node": "~20.19.0",
+    "knip": "^6.41.0",
+    "lefthook": "^2.2.1",
+    "oxlint": "^1.87.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3"
+  }
+}
