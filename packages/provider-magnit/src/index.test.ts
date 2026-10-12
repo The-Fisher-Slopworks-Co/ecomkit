@@ -204,7 +204,7 @@ describe("magnit provider", () => {
 
     const cart = await required(magnit, "cart")(ctx);
 
-    expect(cart.items).toHaveLength(2);
+    expect(cart.items).toHaveLength(3);
     expect(requests[0]?.headers.get("authorization")).toBe("bearer t");
     expect(requests[0]?.headers.get("x-service")).toBe("express");
     expect(requests[0]?.headers.get("x-store-code")).toBe("777885");
@@ -233,6 +233,35 @@ describe("magnit provider", () => {
     await expect(
       required(magnit, "setCartItem")("1000049786", 1.5, ctx),
     ).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
+  test("counts a weighted good in shelf portions", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+
+    const product = await required(magnit, "product")("1000078228", ctx);
+    await required(magnit, "setCartItem")("1000078228", 2, ctx);
+
+    expect(product.title).toBe("Десерт глазированный Акконд Ломтишка, 300 г");
+    const put = requests.find((request) => request.method === "PUT");
+    expect(put?.body).toMatchObject({ items: [{ qnty: 600 }] });
+  });
+
+  test("removes a good without reading its card", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+
+    await required(magnit, "setCartItem")("1000078228", 0, ctx);
+
+    expect(requests.map((request) => request.url.pathname)).not.toContain(
+      "/v2/goods/1000078228/stores/777885",
+    );
+    const put = requests.find((request) => request.method === "PUT");
+    expect(put?.body).toMatchObject({ items: [{ qnty: 0 }] });
   });
 
   test.each([[[]], [["55.75"]], [["north", "37.62"]], [["95", "37.62"]]])(

@@ -10,6 +10,7 @@ import {
   deliveryStore,
   productUrl,
   toCart,
+  weightedTitle,
   type CheckoutPreviewResponse,
 } from "./cart.ts";
 import { Session, sessionSecrets } from "./session.ts";
@@ -26,6 +27,10 @@ interface Good {
   readonly isMissing?: boolean;
   readonly gallery: readonly { readonly url: string }[];
   readonly promotion: { readonly oldPrice: number | null };
+  readonly weighted?: {
+    readonly isWeighted: boolean;
+    readonly step: number | null;
+  };
 }
 
 interface GoodDetails extends Good {
@@ -108,6 +113,13 @@ export function createMagnitProvider({
     };
   }
 
+  function goodDetails(id: string, store: string, ctx: ProviderContext) {
+    return api(ctx).get<GoodDetails>(
+      `v2/goods/${encodeURIComponent(id)}/stores/${encodeURIComponent(store)}`,
+      { storetype: EXPRESS.storeType, catalogtype: EXPRESS.catalogType },
+    );
+  }
+
   return {
     id: "magnit",
     title: "Magnit delivery (express catalogue of one store)",
@@ -145,10 +157,7 @@ export function createMagnitProvider({
 
     async product(id, ctx) {
       const store = await ctx.secrets.require("store");
-      const good = await api(ctx).get<GoodDetails>(
-        `v2/goods/${encodeURIComponent(id)}/stores/${encodeURIComponent(store)}`,
-        { storetype: EXPRESS.storeType, catalogtype: EXPRESS.catalogType },
-      );
+      const good = await goodDetails(id, store, ctx);
       const description = good.details.find(
         (detail) => detail.name === "Описание",
       )?.value;
@@ -172,6 +181,11 @@ export function createMagnitProvider({
         );
       }
       const store = deliveryStore(await preview(ctx));
+      const qnty =
+        quantity === 0
+          ? 0
+          : quantity *
+            (portionGrams(await goodDetails(productId, store, ctx)) ?? 1);
       await session.authorized(ctx, (headers) =>
         ctx.http(API_URL).request("PUT", "v2/carts/lite", {
           headers,
@@ -180,7 +194,7 @@ export function createMagnitProvider({
             items: [
               {
                 goodId: productId,
-                qnty: quantity,
+                qnty,
                 goodService: EXPRESS.storeType,
                 goodStoreCode: store,
               },
@@ -258,9 +272,10 @@ export function createMagnitProvider({
 function toProduct(good: Good, store: string): Product {
   const imageUrl = good.gallery[0]?.url;
   const oldPrice = good.promotion.oldPrice;
+  const grams = portionGrams(good);
   return {
     id: good.id,
-    title: good.name,
+    title: grams === undefined ? good.name : weightedTitle(good.name, grams),
     price: money(good.price),
     ...(oldPrice === null || oldPrice <= good.price
       ? {}
@@ -269,6 +284,12 @@ function toProduct(good: Good, store: string): Product {
     ...(imageUrl === undefined ? {} : { imageUrl }),
     available: good.quantity > 0 && good.isMissing !== true,
   };
+}
+
+function portionGrams(good: Good): number | undefined {
+  return good.weighted?.isWeighted
+    ? (good.weighted.step ?? undefined)
+    : undefined;
 }
 
 function parseCursor(cursor: string | undefined): number {

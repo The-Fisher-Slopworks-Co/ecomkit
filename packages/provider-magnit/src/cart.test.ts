@@ -12,15 +12,20 @@ describe("magnit cart", () => {
     ).toEqual([
       ["1000049786", 2, money(24998)],
       ["1000127183", 1, money(20249)],
+      ["1000078228", 2, money(48780)],
     ]);
     expect(cart.items[0]?.product).toMatchObject({
       price: money(12499),
       imageUrl: "https://images-foodtech.magnit.ru/example/milk.jpeg@webp",
       url: "https://magnit.ru/product/1000049786?shopCode=777885&shopType=express&catalogType=2",
     });
-    expect(cart.subtotal).toEqual(money(45247));
+    expect(cart.items[2]?.product).toMatchObject({
+      title: "Десерт глазированный Акконд Ломтишка, 300 г",
+      price: money(24390),
+    });
+    expect(cart.subtotal).toEqual(money(94027));
     expect(cart.delivery).toEqual(money(9900));
-    expect(cart.total).toEqual(money(55147));
+    expect(cart.total).toEqual(money(103927));
   });
 
   test("asks for a delivery address when the account has none", () => {
