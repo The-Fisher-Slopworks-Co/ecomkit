@@ -174,8 +174,8 @@ export function createMagnitProvider({
       ...sessionSecrets,
     ],
 
-    async login(ask, ctx) {
-      await session.signIn(ask, ctx);
+    async login(ask, ctx, options) {
+      await session.signIn(ask, ctx, options);
       if ((await ctx.secrets.get("store")) === undefined) return;
       const store = (await preview(ctx)).deliveryInfo?.store?.storeCode;
       if (store) await ctx.secrets.set("store", store);

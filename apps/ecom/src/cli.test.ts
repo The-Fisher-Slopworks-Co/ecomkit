@@ -6,19 +6,24 @@ import { memorySecretStore, testRuntime } from "./test-runtime.ts";
 function harness(runtime: Runtime = testRuntime(), secrets: string[] = []) {
   const out: string[] = [];
   const err: string[] = [];
+  const shown: string[] = [];
   let served = false;
   const run = (...argv: string[]) =>
     runCli(argv, {
       stdout: (text) => out.push(text),
       stderr: (text) => err.push(text),
       readSecret: async () => secrets.shift() ?? "",
+      readLine: async (label) => {
+        shown.push(label);
+        return secrets.shift() ?? "";
+      },
       createRuntime: async () => runtime,
       serveMcp: async () => {
         served = true;
       },
     });
   const json = () => JSON.parse(out.at(-1) ?? "null");
-  return { run, out, err, json, served: () => served };
+  return { run, out, err, json, shown, served: () => served };
 }
 
 describe("ecom CLI", () => {
@@ -124,9 +129,20 @@ describe("ecom CLI", () => {
     expect(await cli.run("login", "sms", "--json")).toBe(0);
     expect(cli.json()).toMatchObject({ provider: "sms", stored: ["session"] });
     expect(keychain.values.get("sms/session")).toBe("79990000000:1234");
+    expect(cli.shown).toEqual(["Phone", "Code sent to 79990000000"]);
 
     await cli.run("logout", "sms");
     expect(keychain.values.size).toBe(0);
+  });
+
+  test("enters a code that was already sent with --code", async () => {
+    const keychain = memorySecretStore();
+    const cli = harness(testRuntime(keychain), ["4321"]);
+
+    expect(await cli.run("login", "sms", "--code")).toBe(0);
+    expect(keychain.values.get("sms/session")).toBe("sent:4321");
+    expect(await cli.run("login", "board", "--code", "--json")).toBe(1);
+    expect(cli.json().error.code).toBe("invalid_input");
   });
 
   test("refuses an empty secret", async () => {
