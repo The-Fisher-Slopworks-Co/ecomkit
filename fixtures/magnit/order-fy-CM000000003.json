@@ -1,0 +1,1 @@
+{"orderId":"fy-CM000000003","createdAt":"2026-10-13T08:30:00+03:00","status":{"code":"WAITING_PAY","name":"Ждём оплату"},"service":"express","shop":{"format":"MM","id":"777885","owner":"OWNER_MAGNIT"},"formattedAddress":"Москва, Тверская улица, 1","items":[],"totalPrice":103927,"payment":{"link":"https://pay.example.com/order/fy-CM000000003","method":"sbp"}}

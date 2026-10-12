@@ -24,6 +24,7 @@ export interface OrderInfoResponse {
   readonly items: readonly OrderItem[];
   readonly totalPrice: number;
   readonly formattedAddress?: string;
+  readonly payment?: { readonly link?: string };
 }
 
 export interface OrdersListResponse {
@@ -58,6 +59,7 @@ export function toOrder(info: OrderInfoResponse): Order {
     ...(info.formattedAddress
       ? { address: { line: info.formattedAddress } }
       : {}),
+    ...(info.payment?.link ? { paymentUrl: info.payment.link } : {}),
   };
 }
 

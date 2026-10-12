@@ -34,6 +34,15 @@ function fixtureFile(method: string, url: URL, body: unknown): string {
   if (method === "GET" && url.pathname === "/v1/checkout/preview") {
     return "checkout-preview.json";
   }
+  if (method === "GET" && url.pathname === "/v1/checkout/cart-1.express") {
+    return "checkout-cart.json";
+  }
+  if (
+    method === "POST" &&
+    url.pathname === "/v1/checkout/cart-1.express/order"
+  ) {
+    return "checkout-order.json";
+  }
   if (method === "PUT" && url.pathname === "/v2/carts/lite") {
     return "carts-lite.json";
   }
@@ -270,6 +279,89 @@ describe("magnit provider", () => {
     );
     const put = requests.find((request) => request.method === "PUT");
     expect(put?.body).toMatchObject({ items: [{ qnty: 0 }] });
+  });
+
+  test("previews the order with its delivery time and payment", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+
+    const preview = await required(magnit, "checkoutPreview")(ctx);
+
+    expect(preview).toMatchObject({
+      provider: "magnit",
+      total: money(103927),
+      payment: "Новый СБП",
+      address: { line: "Москва, Тверская улица, 1", apartment: "1" },
+      deliveryWindow: {
+        from: "2026-10-13T09:00:00+03:00",
+        to: "2026-10-13T10:00:00+03:00",
+      },
+    });
+    const opened = requests.find(
+      (request) => request.url.pathname === "/v1/checkout/cart-1.express",
+    );
+    expect(opened?.headers.get("x-store-code")).toBe("777885");
+    expect(opened?.headers.get("x-service")).toBe("express");
+  });
+
+  test("places the confirmed order with the chosen slot and payment", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+    const preview = await required(magnit, "checkoutPreview")(ctx);
+
+    const order = await required(magnit, "placeOrder")(preview, ctx);
+
+    expect(order).toMatchObject({
+      id: "fy-CM000000003",
+      status: "created",
+      paymentUrl: "https://pay.example.com/order/fy-CM000000003",
+    });
+    const placed = requests.find((request) => request.method === "POST");
+    expect(placed?.headers.get("x-delivery-type")).toBe("delivery");
+    expect(placed?.body).toEqual({
+      customer: {
+        email: "buyer@example.com",
+        name: "Покупатель",
+        phone: "79990000000",
+      },
+      deliveryTimeSlot: [
+        {
+          shipmentId: "cart-1.express",
+          timeslot: {
+            interval: {
+              from: "2026-10-13T09:00:00+03:00",
+              to: "2026-10-13T10:00:00+03:00",
+            },
+            price: 9900,
+            type: "timeRange",
+          },
+        },
+      ],
+      paymentMethod: { identifier: "NewGrocerySBP" },
+      replacementStrategy: { identifier: "REPLACE_GOODS" },
+      detailAddress: {
+        comment: "Домофон не работает",
+        isContactless: false,
+        isRover: false,
+      },
+    });
+  });
+
+  test("refuses to place an order that differs from the confirmed one", async () => {
+    const { magnit, ctx, requests } = setup({
+      ECOM_MAGNIT_STORE: "777885",
+      ECOM_MAGNIT_ACCESSTOKEN: "t",
+    });
+    const preview = await required(magnit, "checkoutPreview")(ctx);
+
+    await expect(
+      required(magnit, "placeOrder")({ ...preview, payment: "•••• 0000" }, ctx),
+    ).rejects.toMatchObject({ code: "confirmation_required" });
+    expect(requests.some((request) => request.method === "POST")).toBe(false);
   });
 
   test("lists recent orders, active ones first, without duplicates", async () => {
