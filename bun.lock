@@ -22,6 +22,7 @@
       },
       "devDependencies": {
         "@ecomkit/core": "workspace:*",
+        "@ecomkit/provider-magnit": "workspace:*",
         "@ecomkit/provider-mock": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.32.1",
         "zod": "^4.6.6",
@@ -37,6 +38,13 @@
         "@napi-rs/keyring": "^2.1.1",
       },
     },
+    "packages/provider-magnit": {
+      "name": "@ecomkit/provider-magnit",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ecomkit/core": "workspace:*",
+      },
+    },
     "packages/provider-mock": {
       "name": "@ecomkit/provider-mock",
       "version": "0.0.0",
@@ -47,6 +55,8 @@
   },
   "packages": {
     "@ecomkit/core": ["@ecomkit/core@workspace:packages/core"],
+
+    "@ecomkit/provider-magnit": ["@ecomkit/provider-magnit@workspace:packages/provider-magnit"],
 
     "@ecomkit/provider-mock": ["@ecomkit/provider-mock@workspace:packages/provider-mock"],
 

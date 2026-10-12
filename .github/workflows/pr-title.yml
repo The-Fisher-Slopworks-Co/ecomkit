@@ -23,6 +23,7 @@ jobs:
       scopes: |
         core
         ecom
+        provider-magnit
         provider-mock
         fixtures
         deps
