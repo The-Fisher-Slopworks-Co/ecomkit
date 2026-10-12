@@ -54,6 +54,7 @@ export function formatCheckout(provider: string, result: CheckoutResult) {
   if (result.status === "placed") {
     return [
       `Order ${result.order.id} placed: ${formatMoney(result.order.total)}`,
+      ...(result.order.paymentUrl ? [`Pay at ${result.order.paymentUrl}`] : []),
       ...result.warnings.map((warning) => `warning: ${warning}`),
     ].join("\n");
   }
@@ -61,6 +62,12 @@ export function formatCheckout(provider: string, result: CheckoutResult) {
   return [
     formatCart(preview),
     ...(preview.address ? [`Address: ${formatAddress(preview.address)}`] : []),
+    ...(preview.deliveryWindow
+      ? [
+          `Delivery window: ${preview.deliveryWindow.from} – ${preview.deliveryWindow.to}`,
+        ]
+      : []),
+    ...(preview.payment ? [`Payment: ${preview.payment}`] : []),
     `Limits: ${formatMoney(limits.perOrder)} per order, ${formatMoney(spentToday)} of ${formatMoney(limits.perDay)} spent in the last 24 hours`,
     "",
     `To place the order (code valid until ${result.expiresAt}):`,

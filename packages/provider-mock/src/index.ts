@@ -94,6 +94,11 @@ export function createMockProvider(
         subtotal,
         total,
         address: { line: "Test street 1" },
+        deliveryWindow: {
+          from: "2026-10-12T18:00:00+03:00",
+          to: "2026-10-12T19:00:00+03:00",
+        },
+        payment: "Cash to the courier",
       };
     },
 

@@ -44,6 +44,7 @@ export interface Order {
   readonly items: readonly CartItem[];
   readonly total: Money;
   readonly address?: Address;
+  readonly paymentUrl?: string;
 }
 
 export interface Page<T> {
@@ -57,6 +58,11 @@ export interface SearchQuery {
   readonly cursor?: string;
 }
 
+export interface DeliveryWindow {
+  readonly from: string;
+  readonly to: string;
+}
+
 export interface CheckoutPreview {
   readonly provider: string;
   readonly items: readonly CartItem[];
@@ -64,4 +70,6 @@ export interface CheckoutPreview {
   readonly delivery?: Money;
   readonly total: Money;
   readonly address?: Address;
+  readonly deliveryWindow?: DeliveryWindow;
+  readonly payment?: string;
 }
