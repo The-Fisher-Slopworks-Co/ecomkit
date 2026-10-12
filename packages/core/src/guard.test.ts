@@ -160,6 +160,24 @@ describe("CheckoutGuard", () => {
     expect(original.placed).toHaveLength(0);
   });
 
+  test("rejects a code once the payment method changes", async () => {
+    const original = shop(500);
+    const checkoutGuard = guard();
+    const issued = code(await checkoutGuard.checkout(original.provider, ctx));
+    const repaid: Provider = {
+      ...original.provider,
+      checkoutPreview: async () => ({
+        ...original.preview,
+        payment: "Saved card",
+      }),
+    };
+
+    await expect(
+      checkoutGuard.checkout(repaid, ctx, issued),
+    ).rejects.toMatchObject({ code: "confirmation_required" });
+    expect(original.placed).toHaveLength(0);
+  });
+
   test("expires codes after ten minutes", async () => {
     const { provider, placed } = shop(500);
     const checkoutGuard = guard();

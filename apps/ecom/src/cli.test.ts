@@ -45,6 +45,10 @@ describe("ecom CLI", () => {
     const preview = cli.out.at(-1) ?? "";
     expect(preview).toContain("Total: 389,70 ₽");
     expect(preview).toContain("Address: Test street 1");
+    expect(preview).toContain(
+      "Delivery window: 2026-10-12T18:00:00+03:00 – 2026-10-12T19:00:00+03:00",
+    );
+    expect(preview).toContain("Payment: Cash to the courier");
     const code = /--confirm (\w+)/.exec(preview)?.[1] ?? "";
 
     expect(await cli.run("mock", "checkout", "--confirm", code)).toBe(0);
