@@ -1,0 +1,6 @@
+{
+  "success": true,
+  "order_id": 100000003,
+  "payment_url": "https://pay.example.com/form/1",
+  "qr_url": "https://qr.nspk.ru/AS1000000000000000000000000000000"
+}

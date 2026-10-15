@@ -1,4 +1,9 @@
-import { EcomError, type Provider, type ProviderContext } from "@ecomkit/core";
+import {
+  EcomError,
+  previewDigest,
+  type Provider,
+  type ProviderContext,
+} from "@ecomkit/core";
 import { toProduct, type CatalogItem } from "./catalog.ts";
 import {
   addressLine,
@@ -12,8 +17,12 @@ import {
   type ChangeCartResponse,
 } from "./cart.ts";
 import {
+  createdOrderId,
+  orderRequest,
+  paymentLink,
   toCheckoutPreview,
   type CheckoutCart,
+  type OrderCreated,
   type Profile,
 } from "./checkout.ts";
 import { toOrder, type OrderEntity, type OrdersResponse } from "./orders.ts";
@@ -59,7 +68,7 @@ export function createLifemartProvider({
       }),
       session.authorized<Profile>(ctx, "GET", "user/profile"),
     ]);
-    return toCheckoutPreview(cart, profile);
+    return { cart, profile, preview: toCheckoutPreview(cart, profile) };
   }
 
   async function orderById(id: string, ctx: ProviderContext) {
@@ -180,8 +189,37 @@ export function createLifemartProvider({
 
     order: orderById,
 
-    checkoutPreview: checkout,
+    checkoutPreview: async (ctx) => (await checkout(ctx)).preview,
 
+    async placeOrder(confirmed, ctx) {
+      const { cart, profile, preview } = await checkout(ctx);
+      if (previewDigest(preview) !== previewDigest(confirmed)) {
+        throw new EcomError(
+          "confirmation_required",
+          "The order changed after it was confirmed; run checkout again",
+        );
+      }
+      const created = await session.authorized<OrderCreated>(
+        ctx,
+        "POST",
+        "cart/send",
+        { body: orderRequest(cart, profile) },
+      );
+      const id = String(createdOrderId(created));
+      try {
+        return { ...(await orderById(id, ctx)), ...paymentLink(created) };
+      } catch {
+        return {
+          id,
+          status: "created",
+          createdAt: new Date().toISOString(),
+          items: preview.items,
+          total: preview.total,
+          ...(preview.address ? { address: preview.address } : {}),
+          ...paymentLink(created),
+        };
+      }
+    },
     commands: {
       addresses: {
         description:
