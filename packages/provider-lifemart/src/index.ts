@@ -1,5 +1,14 @@
 import { EcomError, type Provider, type ProviderContext } from "@ecomkit/core";
 import { toProduct, type CatalogItem } from "./catalog.ts";
+import {
+  addressLine,
+  changed,
+  savedAddresses,
+  toCart,
+  type AddressesResponse,
+  type CartEntity,
+  type ChangeCartResponse,
+} from "./cart.ts";
 import { toOrder, type OrderEntity, type OrdersResponse } from "./orders.ts";
 import { Session, sessionSecrets } from "./session.ts";
 
@@ -19,6 +28,20 @@ export function createLifemartProvider({
   function get<T>(path: string, query: Record<string, string>) {
     return (ctx: ProviderContext) =>
       session.request<T>(ctx, "GET", path, { query });
+  }
+
+  async function catalogItem(id: string, ctx: ProviderContext) {
+    if (!/^\d+$/.test(id)) {
+      throw new EcomError("invalid_input", `Bad Lifemart product id ${id}`);
+    }
+    const item = await get<CatalogItem | null>(
+      "services/catalog-api-service/product",
+      { id, is_mobile: "true", language: "ru" },
+    )(ctx);
+    if (item === null || item === undefined) {
+      throw new EcomError("not_found", `No Lifemart product ${id}`);
+    }
+    return item;
   }
 
   return {
@@ -41,19 +64,14 @@ export function createLifemartProvider({
       };
     },
 
-    async product(id, ctx) {
-      if (!/^\d+$/.test(id)) {
-        throw new EcomError("invalid_input", `Bad Lifemart product id ${id}`);
-      }
-      const item = await get<CatalogItem | null>(
-        "services/catalog-api-service/product",
-        { id, is_mobile: "true", language: "ru" },
-      )(ctx);
-      if (item === null || item === undefined) {
-        throw new EcomError("not_found", `No Lifemart product ${id}`);
-      }
-      return toProduct(item);
-    },
+    product: async (id, ctx) => toProduct(await catalogItem(id, ctx)),
+
+    cart: async (ctx) =>
+      toCart(
+        await session.authorized<CartEntity>(ctx, "GET", "cart", {
+          query: { need_update: "true" },
+        }),
+      ),
 
     async orders(ctx) {
       const { orders } = await session.authorized<OrdersResponse>(
@@ -78,6 +96,67 @@ export function createLifemartProvider({
       );
       if (!order) throw new EcomError("not_found", `No Lifemart order ${id}`);
       return toOrder(order);
+    },
+    commands: {
+      addresses: {
+        description:
+          "List the delivery addresses saved in your Lifemart profile",
+        async run(_args, ctx) {
+          const response = await session.authorized<AddressesResponse>(
+            ctx,
+            "GET",
+            "address",
+          );
+          return savedAddresses(response).map((address) => ({
+            id: address.id,
+            city: address.city,
+            address: addressLine(address),
+            ...(address.flat ? { apartment: address.flat } : {}),
+          }));
+        },
+      },
+      address: {
+        description:
+          "Deliver the cart to the saved address <id> (see `ecom lifemart addresses`)",
+        async run(args, ctx) {
+          const [id] = args;
+          if (args.length !== 1 || id === undefined || !/^\d+$/.test(id)) {
+            throw new EcomError(
+              "invalid_input",
+              "Usage: ecom lifemart address <id>",
+            );
+          }
+          const response = await session.authorized<AddressesResponse>(
+            ctx,
+            "GET",
+            "address",
+          );
+          const address = savedAddresses(response).find(
+            (candidate) => String(candidate.id) === id,
+          );
+          if (!address) {
+            throw new EcomError("not_found", `No saved Lifemart address ${id}`);
+          }
+          const cart = changed(
+            await session.authorized<ChangeCartResponse>(
+              ctx,
+              "POST",
+              "cart/delivery",
+              {
+                query: { screen_width: SCREEN_WIDTH },
+                body: {
+                  city_id: address.city_id,
+                  delivery_type: "delivery",
+                  delivery_address: address,
+                  check_stop: "fail",
+                  is_geolocation_allowed: false,
+                },
+              },
+            ),
+          );
+          return toCart(cart);
+        },
+      },
     },
   };
 }
