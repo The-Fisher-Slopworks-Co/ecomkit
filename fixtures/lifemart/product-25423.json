@@ -1,0 +1,15 @@
+{
+  "id": 25423,
+  "name": "Молоко 2,5%, Талицкое",
+  "price": 109,
+  "price_before_discount": 125,
+  "count_step": 1,
+  "is_countable": true,
+  "max_quantity": 4,
+  "photo": "https://img.lifemart.ru/im/menuProduct/6943e904ed23a_w900.jpg",
+  "description": "",
+  "consist": "нормализованное молоко",
+  "info": {
+    "weight": "1000 мл"
+  }
+}

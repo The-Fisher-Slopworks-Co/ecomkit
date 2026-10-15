@@ -45,7 +45,7 @@ bun run ecom -- mock search milk --json   # the CLI from source
 - **One task = one branch = one PR.** Past ~300 changed lines, split it into several PRs. `pr-size.yml` labels every PR `size:XS`…`size:XXL`; **`size:XL` or `size:XXL` means split the PR**, not "explain why it is large".
 - **PR title is the squash commit subject:** conventional commit with a scope, enforced by `.github/workflows/pr-title.yml`.
   - Type: `feat` `fix` `refactor` `chore` `docs` `test` `ci` `perf` `revert`.
-  - Scope (required): `core` `ecom` `provider-magnit` `provider-mock` `fixtures` — or `deps` `github` `release`. A new package (every `provider-*`) means adding it to the `scopes:` list in that workflow.
+  - Scope (required): `core` `ecom` `provider-lifemart` `provider-magnit` `provider-mock` `fixtures` — or `deps` `github` `release`. A new package (every `provider-*`) means adding it to the `scopes:` list in that workflow.
   - Subject: lowercase start, imperative, no trailing period.
   - The body describes this PR alone, following the PR template.
 - **No AI attribution.** No `Assisted-by:` / `Co-Authored-By: <LLM>` trailers in commits, no agent as commit author or committer, and no "Generated with/by …" lines or agent-platform links in PR bodies. The PR title workflow checks the title, the body and every commit of the PR.
