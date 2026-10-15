@@ -11,6 +11,10 @@ function recordingFetch(status: number, body: string) {
   return { calls, fetch };
 }
 
+async function failWithApiKey() {
+  return new Response("{}", { status: 500, headers: { "x-api-key": "k" } });
+}
+
 describe("createHttpClient", () => {
   test("builds the URL, sends JSON and parses the response", async () => {
     const { calls, fetch } = recordingFetch(200, '{"ok":true}');
@@ -56,6 +60,20 @@ describe("createHttpClient", () => {
       status,
       body: { message: "no" },
     });
+  });
+
+  test("shows the response headers to the request, also on errors", async () => {
+    const http = createHttpClient({
+      baseUrl: "https://api.example.com/",
+      fetch: failWithApiKey,
+    });
+    const seen: (string | null)[] = [];
+
+    await expect(
+      http.get("items", { onResponse: (h) => seen.push(h.get("x-api-key")) }),
+    ).rejects.toThrow(EcomError);
+
+    expect(seen).toEqual(["k"]);
   });
 
   test("keeps requests under the base URL", async () => {

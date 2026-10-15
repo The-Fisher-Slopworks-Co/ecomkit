@@ -13,6 +13,7 @@ export interface HttpRequest {
   readonly query?: Readonly<Record<string, string | number | undefined>>;
   readonly body?: unknown;
   readonly headers?: Readonly<Record<string, string>>;
+  readonly onResponse?: (headers: Headers) => void;
 }
 
 export interface HttpClient {
@@ -75,6 +76,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       );
     }
 
+    init.onResponse?.(response.headers);
     const text = await response.text();
     const payload: unknown = text === "" ? undefined : parseJson(text);
     if (!response.ok) {
