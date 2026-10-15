@@ -1,5 +1,10 @@
 import { EcomError, sumMoney, type Cart, type CartItem } from "@ecomkit/core";
-import { productUrl, rubles, weightedTitle } from "./catalog.ts";
+import {
+  productUrl,
+  rubles,
+  weightedTitle,
+  type CatalogItem,
+} from "./catalog.ts";
 
 export interface GeoAddress {
   readonly id?: number | null;
@@ -104,4 +109,23 @@ export function changed(response: ChangeCartResponse): CartEntity {
     );
   }
   return response.cart;
+}
+
+export function serviceQuantity(item: CatalogItem, steps: number): number {
+  return item.is_countable
+    ? steps
+    : Math.round(steps * item.count_step * 1000) / 1000;
+}
+
+export function lineIndex(cart: CartEntity, productId: number): number {
+  const lines = cart.products ?? [];
+  const line = lines.find(
+    (candidate) =>
+      candidate.id === productId &&
+      !candidate.gift &&
+      (candidate.sel_modifiers ?? []).length === 0,
+  );
+  return (
+    line?.idx ?? Math.max(-1, ...lines.map((candidate) => candidate.idx)) + 1
+  );
 }

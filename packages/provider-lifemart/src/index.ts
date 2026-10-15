@@ -3,6 +3,8 @@ import { toProduct, type CatalogItem } from "./catalog.ts";
 import {
   addressLine,
   changed,
+  lineIndex,
+  serviceQuantity,
   savedAddresses,
   toCart,
   type AddressesResponse,
@@ -72,6 +74,43 @@ export function createLifemartProvider({
           query: { need_update: "true" },
         }),
       ),
+
+    async setCartItem(productId, quantity, ctx) {
+      if (!Number.isSafeInteger(quantity) || quantity < 0) {
+        throw new EcomError(
+          "invalid_input",
+          `Quantity must be a non-negative integer, got ${quantity}`,
+        );
+      }
+      const [current, item] = await Promise.all([
+        session.authorized<CartEntity>(ctx, "GET", "cart", {
+          query: { need_update: "false" },
+        }),
+        catalogItem(productId, ctx),
+      ]);
+      if (!current.delivery_type) {
+        throw new EcomError(
+          "invalid_input",
+          "Choose where to deliver first: `ecom lifemart addresses`, then `ecom lifemart address <id>`",
+        );
+      }
+      const cart = changed(
+        await session.authorized<ChangeCartResponse>(
+          ctx,
+          "POST",
+          "cart/product",
+          {
+            body: {
+              id: item.id,
+              quantity: serviceQuantity(item, quantity),
+              idx: lineIndex(current, item.id),
+              modifiers: [],
+            },
+          },
+        ),
+      );
+      return toCart(cart);
+    },
 
     async orders(ctx) {
       const { orders } = await session.authorized<OrdersResponse>(
