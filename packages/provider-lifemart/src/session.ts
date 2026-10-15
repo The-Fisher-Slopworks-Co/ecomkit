@@ -18,6 +18,7 @@ const ACCESS_TOKEN_EXPIRE = "accessTokenExpire";
 const REFRESH_TOKEN = "refreshToken";
 const SIGN_IN = "signIn";
 const CODE_ATTEMPTS = 3;
+const REFRESH_MARGIN_MS = 60_000;
 
 export const sessionSecrets = [
   { key: DEVICE, label: "Device id the Lifemart session is bound to" },
@@ -43,13 +44,86 @@ interface TokensReply extends Reply {
   readonly access_token_expire?: string | null;
 }
 
+interface Tokens {
+  readonly token: string;
+  readonly access_token: string;
+  readonly access_token_expire?: string | null | undefined;
+}
+
 type Headers = Readonly<Record<string, string>>;
 
 export class Session {
   readonly #fallbackDevice = newDeviceId();
   #apiKey: string | undefined;
 
-  constructor(private readonly deviceId?: string) {}
+  constructor(
+    private readonly deviceId?: string,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  async authorized<T>(
+    ctx: ProviderContext,
+    method: string,
+    path: string,
+    init: HttpRequest = {},
+  ): Promise<T> {
+    const token = await ctx.secrets.get(ACCESS_TOKEN);
+    if (token === undefined) throw signInRequired();
+    const send = (authorization: string) =>
+      this.request<T>(ctx, method, path, {
+        ...init,
+        headers: { ...init.headers, authorization },
+      });
+    if (await this.expiresSoon(ctx)) return send(await this.refresh(ctx));
+    try {
+      return await send(token);
+    } catch (error) {
+      if (!(error instanceof EcomError && error.code === "auth_required")) {
+        throw error;
+      }
+    }
+    return send(await this.refresh(ctx));
+  }
+
+  private async expiresSoon(ctx: ProviderContext): Promise<boolean> {
+    const expire = Date.parse(
+      (await ctx.secrets.get(ACCESS_TOKEN_EXPIRE)) ?? "",
+    );
+    return !Number.isNaN(expire) && expire - REFRESH_MARGIN_MS <= this.now();
+  }
+
+  private async refresh(ctx: ProviderContext): Promise<string> {
+    const refreshToken = await ctx.secrets.get(REFRESH_TOKEN);
+    if (refreshToken === undefined) throw signInRequired();
+    let reply: TokensReply;
+    try {
+      reply = await this.request<TokensReply>(
+        ctx,
+        "POST",
+        "user/refreshToken",
+        { body: { refresh_token: refreshToken } },
+      );
+    } catch (error) {
+      if (error instanceof EcomError && error.code === "auth_required") {
+        throw signInRequired();
+      }
+      throw error;
+    }
+    const { success, token, access_token } = reply;
+    if (!(success && token && access_token)) throw signInRequired();
+    await this.saveTokens(ctx, { ...reply, token, access_token });
+    return access_token;
+  }
+
+  private async saveTokens(ctx: ProviderContext, tokens: Tokens) {
+    await ctx.secrets.set(ACCESS_TOKEN, tokens.access_token);
+    await ctx.secrets.set(REFRESH_TOKEN, tokens.token);
+    if (tokens.access_token_expire) {
+      await ctx.secrets.set(ACCESS_TOKEN_EXPIRE, tokens.access_token_expire);
+    } else {
+      await ctx.secrets.delete(ACCESS_TOKEN_EXPIRE);
+    }
+  }
 
   async request<T>(
     ctx: ProviderContext,
@@ -93,12 +167,7 @@ export class Session {
     const phone = codeSent
       ? await pendingPhone(ask, ctx)
       : await this.sendCode(ask, ctx);
-    const reply = await this.checkCode(ask, ctx, phone);
-    await ctx.secrets.set(ACCESS_TOKEN, reply.access_token);
-    await ctx.secrets.set(REFRESH_TOKEN, reply.token);
-    if (reply.access_token_expire) {
-      await ctx.secrets.set(ACCESS_TOKEN_EXPIRE, reply.access_token_expire);
-    }
+    await this.saveTokens(ctx, await this.checkCode(ask, ctx, phone));
     await ctx.secrets.delete(SIGN_IN);
   }
 
@@ -196,6 +265,13 @@ export function normalizePhone(raw: string): string {
     );
   }
   return national;
+}
+
+function signInRequired(): EcomError {
+  return new EcomError(
+    "auth_required",
+    "Lifemart session is missing or expired; run `ecom login lifemart`",
+  );
 }
 
 function newDeviceId(): string {

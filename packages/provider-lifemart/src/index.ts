@@ -1,9 +1,11 @@
 import { EcomError, type Provider, type ProviderContext } from "@ecomkit/core";
 import { toProduct, type CatalogItem } from "./catalog.ts";
+import { toOrder, type OrderEntity, type OrdersResponse } from "./orders.ts";
 import { Session, sessionSecrets } from "./session.ts";
 
 const SCREEN_WIDTH = "1080";
 const DEFAULT_PAGE_SIZE = 20;
+const RECENT_ORDERS = "10";
 
 interface LifemartOptions {
   readonly deviceId?: string;
@@ -51,6 +53,31 @@ export function createLifemartProvider({
         throw new EcomError("not_found", `No Lifemart product ${id}`);
       }
       return toProduct(item);
+    },
+
+    async orders(ctx) {
+      const { orders } = await session.authorized<OrdersResponse>(
+        ctx,
+        "GET",
+        "orders/list",
+        {
+          query: { max_records: RECENT_ORDERS, offset: "0", detailed: "true" },
+        },
+      );
+      return { items: orders.map(toOrder) };
+    },
+
+    async order(id, ctx) {
+      if (!/^\d+$/.test(id)) {
+        throw new EcomError("invalid_input", `Bad Lifemart order id ${id}`);
+      }
+      const order = await session.authorized<OrderEntity | null>(
+        ctx,
+        "GET",
+        `orders/details/${id}`,
+      );
+      if (!order) throw new EcomError("not_found", `No Lifemart order ${id}`);
+      return toOrder(order);
     },
   };
 }

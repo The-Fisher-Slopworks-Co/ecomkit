@@ -13,7 +13,7 @@ export interface CatalogItem {
   readonly consist?: string | null;
 }
 
-function rubles(amount: number): Money {
+export function rubles(amount: number): Money {
   return money(Math.round(amount * 100));
 }
 
@@ -21,11 +21,11 @@ function stepGrams(item: CatalogItem): number | undefined {
   return item.is_countable ? undefined : Math.round(item.count_step * 1000);
 }
 
-function weightedTitle(title: string, grams: number): string {
+export function weightedTitle(title: string, grams: number): string {
   return `${title}, ${grams} г`;
 }
 
-function productUrl(id: number | string): string {
+export function productUrl(id: number | string): string {
   return `https://lifemart.ru/product/${id}`;
 }
 
