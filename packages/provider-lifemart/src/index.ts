@@ -11,6 +11,11 @@ import {
   type CartEntity,
   type ChangeCartResponse,
 } from "./cart.ts";
+import {
+  toCheckoutPreview,
+  type CheckoutCart,
+  type Profile,
+} from "./checkout.ts";
 import { toOrder, type OrderEntity, type OrdersResponse } from "./orders.ts";
 import { Session, sessionSecrets } from "./session.ts";
 
@@ -45,6 +50,29 @@ export function createLifemartProvider({
           city: String(cart.city_id),
         }
       : {};
+  }
+
+  async function checkout(ctx: ProviderContext) {
+    const [cart, profile] = await Promise.all([
+      session.authorized<CheckoutCart>(ctx, "GET", "cart", {
+        query: { need_update: "true" },
+      }),
+      session.authorized<Profile>(ctx, "GET", "user/profile"),
+    ]);
+    return toCheckoutPreview(cart, profile);
+  }
+
+  async function orderById(id: string, ctx: ProviderContext) {
+    if (!/^\d+$/.test(id)) {
+      throw new EcomError("invalid_input", `Bad Lifemart order id ${id}`);
+    }
+    const order = await session.authorized<OrderEntity | null>(
+      ctx,
+      "GET",
+      `orders/details/${id}`,
+    );
+    if (!order) throw new EcomError("not_found", `No Lifemart order ${id}`);
+    return toOrder(order);
   }
 
   async function catalogItem(id: string, ctx: ProviderContext) {
@@ -150,18 +178,10 @@ export function createLifemartProvider({
       return { items: orders.map(toOrder) };
     },
 
-    async order(id, ctx) {
-      if (!/^\d+$/.test(id)) {
-        throw new EcomError("invalid_input", `Bad Lifemart order id ${id}`);
-      }
-      const order = await session.authorized<OrderEntity | null>(
-        ctx,
-        "GET",
-        `orders/details/${id}`,
-      );
-      if (!order) throw new EcomError("not_found", `No Lifemart order ${id}`);
-      return toOrder(order);
-    },
+    order: orderById,
+
+    checkoutPreview: checkout,
+
     commands: {
       addresses: {
         description:

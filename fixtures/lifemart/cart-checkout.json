@@ -1,0 +1,63 @@
+{
+  "products": [
+    {
+      "id": 7571,
+      "idx": 0,
+      "name": "Молоко топлёное 4% БЗМЖ",
+      "photo": null,
+      "price": 94,
+      "calc_price": 188,
+      "quantity": 2,
+      "count_step": 1,
+      "is_countable": true,
+      "sel_modifiers": []
+    },
+    {
+      "id": 25038,
+      "idx": 3,
+      "name": "Бананы",
+      "photo": null,
+      "price": 171,
+      "calc_price": 68.4,
+      "quantity": 0.4,
+      "count_step": 0.2,
+      "is_countable": false,
+      "sel_modifiers": []
+    }
+  ],
+  "total_amount": 256.4,
+  "delivery_price": 99,
+  "delivery_type": "delivery",
+  "delivery_address": {
+    "id": 1000001,
+    "city": "Екатеринбург",
+    "street": "улица Ленина",
+    "house": "1",
+    "flat": "1",
+    "comment": "Домофон не работает"
+  },
+  "city_id": 1,
+  "delivery_time": "2026-01-01T12:40:00+05:00",
+  "minimum_amount": 200,
+  "fees": [],
+  "available_payment_types": [
+    {
+      "id": "cash",
+      "name": "Наличными"
+    },
+    {
+      "id": "online",
+      "name": "Онлайн",
+      "types": [
+        {
+          "type": "online",
+          "name": "Картой"
+        },
+        {
+          "type": "qr",
+          "name": "СБП"
+        }
+      ]
+    }
+  ]
+}
