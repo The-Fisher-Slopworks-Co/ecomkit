@@ -39,6 +39,8 @@ export interface Profile {
 export interface OrderCreated {
   readonly success: boolean;
   readonly order_id?: number | null;
+  readonly qr_id?: string | null;
+  readonly online_id?: string | null;
   readonly payment_url?: string | null;
   readonly qr_url?: string | null;
   readonly error_code?: string | null;
@@ -151,14 +153,16 @@ export function orderRequest(cart: CheckoutCart, profile: Profile) {
   };
 }
 
-export function createdOrderId(created: OrderCreated): number {
-  if (!created.success || !created.order_id) {
-    throw new EcomError(
-      "invalid_input",
-      `Lifemart did not place the order: ${created.error_message || created.error_code || "unknown error"}`,
-    );
+export function createdOrderId(created: OrderCreated): number | string {
+  if (created.success && created.order_id) return created.order_id;
+  const payment = created.qr_id || created.online_id;
+  if (created.success && payment && (created.qr_url || created.payment_url)) {
+    return `payment-${payment}`;
   }
-  return created.order_id;
+  throw new EcomError(
+    "invalid_input",
+    `Lifemart did not place the order: ${created.error_message || created.error_code || "unknown error"}`,
+  );
 }
 
 export function paymentLink(created: OrderCreated): Partial<Order> {

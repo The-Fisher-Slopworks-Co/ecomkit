@@ -125,6 +125,17 @@ describe("order creation", () => {
     });
   });
 
+  test("waits for SBP payment before the order gets a number", () => {
+    expect(
+      createdOrderId({
+        success: true,
+        qr_id: "qr-1",
+        qr_url: "https://qr.nspk.ru/AS1",
+      }),
+    ).toBe("payment-qr-1");
+    expect(() => createdOrderId({ success: true })).toThrow("unknown error");
+  });
+
   test("passes on a refusal", () => {
     expect(() =>
       createdOrderId({

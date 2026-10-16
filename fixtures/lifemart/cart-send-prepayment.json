@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "order_number": null,
+  "online_id": "0a000000-0000-0000-0000-000000000001",
+  "payment_url": "https://api.lifemart.ru/api/cart/qrPaymentGatewayresult?url=https%3A%2F%2Fqr.nspk.ru%2FAS2000000000000000000000000000000&qrId=0a000000-0000-0000-0000-000000000001",
+  "payment_data": null,
+  "t": "2026-01-01T12:00:00+05:00",
+  "is_payed": false,
+  "qr_id": "0a000000-0000-0000-0000-000000000001",
+  "qr_url": "https://qr.nspk.ru/AS2000000000000000000000000000000"
+}

@@ -454,6 +454,27 @@ describe("lifemart provider", () => {
     });
   });
 
+  test("returns the SBP link of an order paid before it is created", async () => {
+    const checkoutCart = await fixtureJson("cart-checkout.json");
+    const { lifemart, ctx, requests } = setup({
+      "GET /api/cart": checkoutCart,
+      "POST /api/cart/send": await fixtureJson("cart-send-prepayment.json"),
+    });
+    const preview = await required(lifemart, "checkoutPreview")(ctx);
+
+    const order = await required(lifemart, "placeOrder")(preview, ctx);
+
+    expect(order).toMatchObject({
+      id: "payment-0a000000-0000-0000-0000-000000000001",
+      status: "created",
+      total: preview.total,
+      paymentUrl: "https://qr.nspk.ru/AS2000000000000000000000000000000",
+    });
+    expect(requests.some((r) => r.url.pathname.startsWith("/api/orders"))).toBe(
+      false,
+    );
+  });
+
   test("refuses an order that changed after confirmation", async () => {
     const checkoutCart = await fixtureJson("cart-checkout.json");
     const { lifemart, ctx, requests } = setup({
