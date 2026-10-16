@@ -266,7 +266,7 @@ describe("lifemart provider", () => {
     );
   });
 
-  test("reads the cart in steps and marks lines out of stock", async () => {
+  test("reads the cart in steps with its nutrition and marks lines out of stock", async () => {
     const { lifemart, ctx } = setup();
 
     const cart = await required(lifemart, "cart")(ctx);
@@ -287,6 +287,7 @@ describe("lifemart provider", () => {
       subtotal: money(25640),
       delivery: money(9900),
       total: money(35540),
+      nutrition: { kcal: 265, proteinG: 6, fatG: 5, carbsG: 42 },
     });
   });
 

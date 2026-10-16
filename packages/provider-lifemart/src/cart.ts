@@ -46,11 +46,19 @@ interface PromoEvent {
   readonly error_message?: string | null;
 }
 
+interface TotalNutrition {
+  readonly calories: number;
+  readonly proteins: number;
+  readonly fats: number;
+  readonly carbohydrates: number;
+}
+
 export interface CartEntity {
   readonly products?: readonly CartLine[] | null;
   readonly promoevents?: readonly PromoEvent[] | null;
   readonly total_amount: number;
   readonly discount_amount?: number | null;
+  readonly total_nutrition?: TotalNutrition | null;
   readonly delivery_price?: number | null;
   readonly delivery_type?: string | null;
   readonly delivery_address?: GeoAddress | null;
@@ -102,12 +110,23 @@ export function toCart(cart: CartEntity): Cart {
   const subtotal = rubles(cart.total_amount);
   const discount = rubles(cart.discount_amount ?? 0);
   const delivery = rubles(cart.delivery_price ?? 0);
+  const nutrition = cart.total_nutrition;
   return {
     items: (cart.products ?? []).map(toCartItem),
     subtotal,
     ...(discount.amount > 0 ? { discount } : {}),
     delivery,
     total: money(subtotal.amount - discount.amount + delivery.amount),
+    ...(nutrition?.calories
+      ? {
+          nutrition: {
+            kcal: nutrition.calories,
+            proteinG: nutrition.proteins,
+            fatG: nutrition.fats,
+            carbsG: nutrition.carbohydrates,
+          },
+        }
+      : {}),
   };
 }
 
