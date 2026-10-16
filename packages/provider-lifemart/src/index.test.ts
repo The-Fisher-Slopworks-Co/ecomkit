@@ -29,6 +29,13 @@ function fixtureFile(method: string, url: URL): string | null {
   ) {
     return url.searchParams.get("id") === "25423" ? "product-25423.json" : null;
   }
+  if (method === "GET" && url.pathname === "/api/orders/list") {
+    return "orders-list.json";
+  }
+  const order = /^\/api\/orders\/details\/(\d+)$/.exec(url.pathname);
+  if (method === "GET" && order) {
+    return order[1] === "100000002" ? `order-${order[1]}.json` : null;
+  }
   throw new Error(`No fixture for ${method} ${url.href}`);
 }
 
@@ -46,7 +53,10 @@ function setup() {
     });
   };
   const ctx: ProviderContext = {
-    secrets: providerSecrets(envSecretStore({}), "lifemart"),
+    secrets: providerSecrets(
+      envSecretStore({ ECOM_LIFEMART_ACCESSTOKEN: "access-1" }),
+      "lifemart",
+    ),
     http: (baseUrl) => createHttpClient({ baseUrl, fetch }),
   };
   return {
@@ -137,6 +147,67 @@ describe("lifemart provider", () => {
     const { lifemart, ctx } = setup();
 
     expect(required(lifemart, "product")("99999999", ctx)).rejects.toThrow(
+      expect.objectContaining({ code: "not_found" }),
+    );
+  });
+
+  test("lists recent orders with the access token", async () => {
+    const { lifemart, ctx, requests } = setup();
+
+    const { items } = await required(lifemart, "orders")(ctx);
+
+    expect(items.map((order) => [order.id, order.status])).toEqual([
+      ["100000002", "delivering"],
+      ["100000001", "cancelled"],
+    ]);
+    expect(requests[0]?.headers.get("authorization")).toBe("access-1");
+    expect(requests[0]?.url.searchParams.get("max_records")).toBe("10");
+    expect(items[1]?.address).toEqual({
+      line: "улица Малышева, 1",
+      city: "Екатеринбург",
+      comment: "pickup",
+    });
+  });
+
+  test("reads an order with its items and address", async () => {
+    const { lifemart, ctx } = setup();
+
+    const order = await required(lifemart, "order")("100000002", ctx);
+
+    expect(order).toMatchObject({
+      createdAt: "2026-01-02T05:00:00.000Z",
+      total: money(14320),
+      address: {
+        line: "улица Ленина, 1",
+        city: "Екатеринбург",
+        apartment: "кв. 1",
+      },
+    });
+    expect(order.items).toEqual([
+      expect.objectContaining({ quantity: 2, total: money(10900) }),
+      expect.objectContaining({
+        product: expect.objectContaining({
+          title: "Бананы, 200 г",
+          price: money(3420),
+        }),
+        quantity: 1,
+        total: money(3420),
+      }),
+    ]);
+  });
+
+  test("keeps an order with an unknown status in progress", async () => {
+    const { lifemart, ctx } = setup();
+
+    const order = await required(lifemart, "order")("100000002", ctx);
+
+    expect(order.status).toBe("in_progress");
+  });
+
+  test("reports a missing order as not found", async () => {
+    const { lifemart, ctx } = setup();
+
+    await expect(required(lifemart, "order")("100000009", ctx)).rejects.toThrow(
       expect.objectContaining({ code: "not_found" }),
     );
   });

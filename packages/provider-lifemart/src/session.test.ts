@@ -232,6 +232,88 @@ describe("lifemart session", () => {
   });
 });
 
+const NOW = Date.parse("2026-01-01T12:00:00+05:00");
+
+const tokens = {
+  accessToken: "access-1",
+  refreshToken: "refresh-1",
+  accessTokenExpire: "2026-01-01T13:00:00+05:00",
+};
+
+const refreshed = { ...issued, token: "refresh-2", access_token: "access-2" };
+
+describe("lifemart authorized requests", () => {
+  test("send the raw access token", async () => {
+    const { ctx, calls } = setup({}, tokens);
+
+    await new Session(DEVICE_ID, () => NOW).authorized(ctx, "GET", "cart");
+
+    expect(calls.map((call) => call.headers.get("authorization"))).toEqual([
+      "access-1",
+    ]);
+  });
+
+  test("refresh a token that is about to expire first", async () => {
+    const { ctx, calls, values } = setup(
+      { "user/refreshToken": [[200, refreshed]] },
+      { ...tokens, accessTokenExpire: "2026-01-01T12:00:30+05:00" },
+    );
+
+    await new Session(DEVICE_ID, () => NOW).authorized(ctx, "GET", "cart");
+
+    expect(calls.map((call) => [call.path, call.body])).toEqual([
+      ["user/refreshToken", { refresh_token: "refresh-1" }],
+      ["cart", undefined],
+    ]);
+    expect(calls[0]?.headers.has("authorization")).toBe(false);
+    expect(calls[1]?.headers.get("authorization")).toBe("access-2");
+    expect(values.get("refreshToken")).toBe("refresh-2");
+  });
+
+  test("refresh once after a 401", async () => {
+    const { ctx, calls } = setup(
+      {
+        cart: [[401, { error_code: "access_token_expired" }]],
+        "user/refreshToken": [[200, refreshed]],
+      },
+      tokens,
+    );
+
+    await new Session(DEVICE_ID, () => NOW).authorized(ctx, "GET", "cart");
+
+    expect(
+      calls.map((call) => [call.path, call.headers.get("authorization")]),
+    ).toEqual([
+      ["cart", "access-1"],
+      ["user/refreshToken", null],
+      ["cart", "access-2"],
+    ]);
+  });
+
+  test("ask to sign in again when the refresh token is rejected", async () => {
+    const { ctx } = setup(
+      {
+        cart: [[401, { error_code: "access_token_expired" }]],
+        "user/refreshToken": [[401, { error_code: "invalid_refresh_token" }]],
+      },
+      tokens,
+    );
+
+    await expect(
+      new Session(DEVICE_ID, () => NOW).authorized(ctx, "GET", "cart"),
+    ).rejects.toThrow("ecom login lifemart");
+  });
+
+  test("ask to sign in without a token", async () => {
+    const { ctx, calls } = setup({});
+
+    await expect(
+      new Session(DEVICE_ID).authorized(ctx, "GET", "cart"),
+    ).rejects.toThrow(expect.objectContaining({ code: "auth_required" }));
+    expect(calls).toEqual([]);
+  });
+});
+
 describe("apiKey", () => {
   test("mixes the device id with the server key like the app", () => {
     expect(apiKey(DEVICE_ID, SERVER_KEY)).toBe("11227260");
