@@ -32,13 +32,39 @@ export function createLifemartProvider({
       session.request<T>(ctx, "GET", path, { query });
   }
 
+  async function deliveryStore(
+    ctx: ProviderContext,
+  ): Promise<Record<string, string>> {
+    if ((await ctx.secrets.get("accessToken")) === undefined) return {};
+    const cart = await session.authorized<CartEntity>(ctx, "GET", "cart", {
+      query: { need_update: "false" },
+    });
+    return cart.delivery_type && cart.cart_department_id && cart.city_id
+      ? {
+          department: String(cart.cart_department_id),
+          city: String(cart.city_id),
+        }
+      : {};
+  }
+
   async function catalogItem(id: string, ctx: ProviderContext) {
     if (!/^\d+$/.test(id)) {
       throw new EcomError("invalid_input", `Bad Lifemart product id ${id}`);
     }
+    const store = await deliveryStore(ctx);
     const item = await get<CatalogItem | null>(
       "services/catalog-api-service/product",
-      { id, is_mobile: "true", language: "ru" },
+      {
+        ...store,
+        id,
+        brand_id: "2",
+        ignore_schedule: "false",
+        ignore_stoplist: "0",
+        is_mobile: "true",
+        language: "ru",
+        product_format: "notransform",
+        type_delivery: "delivery",
+      },
     )(ctx);
     if (item === null || item === undefined) {
       throw new EcomError("not_found", `No Lifemart product ${id}`);

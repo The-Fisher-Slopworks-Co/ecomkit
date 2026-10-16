@@ -48,6 +48,7 @@ export interface CartEntity {
   readonly delivery_type?: string | null;
   readonly delivery_address?: GeoAddress | null;
   readonly delivery_department_id?: number | null;
+  readonly cart_department_id?: number | null;
   readonly city_id?: number | null;
 }
 

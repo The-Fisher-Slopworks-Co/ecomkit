@@ -53,7 +53,10 @@ function fixtureFile(method: string, url: URL): string | null {
   throw new Error(`No fixture for ${method} ${url.href}`);
 }
 
-function setup(overrides: Overrides = {}) {
+function setup(
+  overrides: Overrides = {},
+  env: Record<string, string> = { ECOM_LIFEMART_ACCESSTOKEN: "access-1" },
+) {
   const requests: Recorded[] = [];
   const fetch = async (input: string, init?: RequestInit) => {
     const url = new URL(input);
@@ -77,10 +80,7 @@ function setup(overrides: Overrides = {}) {
     });
   };
   const ctx: ProviderContext = {
-    secrets: providerSecrets(
-      envSecretStore({ ECOM_LIFEMART_ACCESSTOKEN: "access-1" }),
-      "lifemart",
-    ),
+    secrets: providerSecrets(envSecretStore(env), "lifemart"),
     http: (baseUrl) => createHttpClient({ baseUrl, fetch }),
   };
   return {
@@ -337,5 +337,35 @@ describe("lifemart provider", () => {
     await expect(
       lifemart.commands?.["address"]?.run(["42"], ctx),
     ).rejects.toThrow(expect.objectContaining({ code: "not_found" }));
+  });
+
+  test("checks a product card against the store of the cart", async () => {
+    const { lifemart, ctx, requests } = setup({
+      "GET /api/cart": {
+        products: [],
+        total_amount: 0,
+        delivery_type: "delivery",
+        cart_department_id: 42,
+        city_id: 1,
+      },
+    });
+
+    await required(lifemart, "product")("25423", ctx);
+
+    const card = requests.find((r) => r.url.pathname.endsWith("/product"));
+    expect(card?.url.searchParams.get("department")).toBe("42");
+    expect(card?.url.searchParams.get("city")).toBe("1");
+    expect(card?.url.searchParams.get("ignore_stoplist")).toBe("0");
+  });
+
+  test("reads a product card of the whole network before sign-in", async () => {
+    const { lifemart, ctx, requests } = setup({}, {});
+
+    await required(lifemart, "product")("25423", ctx);
+
+    expect(requests.map((r) => r.url.pathname)).toEqual([
+      "/api/services/catalog-api-service/product",
+    ]);
+    expect(requests[0]?.url.searchParams.has("department")).toBe(false);
   });
 });
