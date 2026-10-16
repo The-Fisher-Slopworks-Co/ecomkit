@@ -62,6 +62,7 @@ export function formatCart(cart: Cart): string {
     ...(cart.discount ? [`Discount: −${formatMoney(cart.discount)}`] : []),
     ...(cart.delivery ? [`Delivery: ${formatMoney(cart.delivery)}`] : []),
     `Total: ${formatMoney(cart.total)}`,
+    ...(cart.nutrition ? [`Nutrition: ${formatMacros(cart.nutrition)}`] : []),
   ].join("\n");
 }
 
