@@ -6,6 +6,7 @@ interface OrderProduct {
   readonly name: string;
   readonly photo?: string | null;
   readonly price: number;
+  readonly calc_price?: number | null;
   readonly quantity: number;
   readonly is_countable: boolean;
 }
@@ -22,6 +23,8 @@ export interface OrderEntity {
   readonly delivery_department_address?: string | null;
   readonly city_name?: string | null;
   readonly total_amount: number;
+  readonly discount_amount?: number | null;
+  readonly delivery_price?: number | null;
   readonly products?: readonly OrderProduct[] | null;
 }
 
@@ -45,7 +48,11 @@ export function toOrder(order: OrderEntity): Order {
     status: orderStatus(order),
     createdAt: new Date(order.create_time).toISOString(),
     items: (order.products ?? []).map(toOrderItem),
-    total: rubles(order.total_amount),
+    total: rubles(
+      order.total_amount -
+        (order.discount_amount ?? 0) +
+        (order.delivery_price ?? 0),
+    ),
     ...(address ? { address } : {}),
   };
 }
@@ -74,14 +81,16 @@ function orderAddress(order: OrderEntity): Address | undefined {
 }
 
 function toOrderItem(product: OrderProduct): CartItem {
-  const total = rubles(product.price * product.quantity);
+  const total = rubles(product.calc_price ?? product.price);
   return {
     product: {
       id: String(product.id),
       title: product.is_countable
         ? product.name
         : weightedTitle(product.name, Math.round(product.quantity * 1000)),
-      price: product.is_countable ? rubles(product.price) : total,
+      price: product.is_countable
+        ? rubles((product.calc_price ?? product.price) / product.quantity)
+        : total,
       url: productUrl(product.id),
       ...(product.photo ? { imageUrl: product.photo } : {}),
       available: true,

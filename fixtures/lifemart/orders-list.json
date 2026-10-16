@@ -12,12 +12,14 @@
       "delivery_address_add_info": "кв. 1",
       "city_name": "Екатеринбург",
       "total_amount": 143.2,
+      "discount_amount": 14,
       "products": [
         {
           "id": 25423,
           "name": "Молоко 2,5%, Талицкое",
           "photo": "https://img.lifemart.ru/im/menuProduct/6943e904ed23a_w900.jpg",
-          "price": 54.5,
+          "price": 109,
+          "calc_price": 109,
           "quantity": 2,
           "is_countable": true
         },
@@ -25,7 +27,8 @@
           "id": 25038,
           "name": "Бананы",
           "photo": null,
-          "price": 171,
+          "price": 34.2,
+          "calc_price": 34.2,
           "quantity": 0.2,
           "is_countable": false
         }

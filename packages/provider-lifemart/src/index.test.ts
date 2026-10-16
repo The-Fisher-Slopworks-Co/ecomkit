@@ -204,14 +204,14 @@ describe("lifemart provider", () => {
     });
   });
 
-  test("reads an order with its items and address", async () => {
+  test("reads an order with its items, address and paid total", async () => {
     const { lifemart, ctx } = setup();
 
     const order = await required(lifemart, "order")("100000002", ctx);
 
     expect(order).toMatchObject({
       createdAt: "2026-01-02T05:00:00.000Z",
-      total: money(14320),
+      total: money(12920),
       address: {
         line: "улица Ленина, 1",
         city: "Екатеринбург",
