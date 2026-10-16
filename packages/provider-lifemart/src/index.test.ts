@@ -30,11 +30,15 @@ function fixtureFile(method: string, url: URL): string | null {
     method === "GET" &&
     url.pathname === "/api/services/catalog-api-service/product"
   ) {
-    return url.searchParams.get("id") === "25423" ? "product-25423.json" : null;
+    const id = url.searchParams.get("id");
+    return id === "25423" || id === "25038" ? `product-${id}.json` : null;
   }
   if (method === "GET" && url.pathname === "/api/cart") return "cart.json";
   if (method === "GET" && url.pathname === "/api/address") {
     return "address.json";
+  }
+  if (method === "POST" && url.pathname === "/api/cart/product") {
+    return "cart-product.json";
   }
   if (method === "POST" && url.pathname === "/api/cart/delivery") {
     return "cart-delivery.json";
@@ -254,6 +258,52 @@ describe("lifemart provider", () => {
       delivery: money(9900),
       total: money(35540),
     });
+  });
+
+  test("sets a weighted item in kilograms on its own line", async () => {
+    const { lifemart, ctx, requests } = setup();
+
+    await required(lifemart, "setCartItem")("25038", 3, ctx);
+
+    const post = requests.find((r) => r.url.pathname === "/api/cart/product");
+    expect(post?.body).toEqual({
+      id: 25038,
+      quantity: 0.6,
+      idx: 3,
+      modifiers: [],
+    });
+  });
+
+  test("puts a new item on the next free line", async () => {
+    const { lifemart, ctx, requests } = setup();
+
+    await required(lifemart, "setCartItem")("25423", 1, ctx);
+
+    const post = requests.find((r) => r.url.pathname === "/api/cart/product");
+    expect(post?.body).toMatchObject({ id: 25423, quantity: 1, idx: 4 });
+  });
+
+  test("asks to choose a delivery address before filling the cart", async () => {
+    const { lifemart, ctx } = setup({
+      "GET /api/cart": { products: [], total_amount: 0, delivery_type: null },
+    });
+
+    await expect(
+      required(lifemart, "setCartItem")("25423", 1, ctx),
+    ).rejects.toThrow("ecom lifemart address <id>");
+  });
+
+  test("passes on a change the store refuses", async () => {
+    const { lifemart, ctx } = setup({
+      "POST /api/cart/product": {
+        success: false,
+        error_message: "Нельзя добавить больше, чем есть в магазине",
+      },
+    });
+
+    await expect(
+      required(lifemart, "setCartItem")("25423", 9, ctx),
+    ).rejects.toThrow("Нельзя добавить больше, чем есть в магазине");
   });
 
   test("lists saved addresses and delivers the cart to one", async () => {

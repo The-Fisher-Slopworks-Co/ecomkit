@@ -1,0 +1,15 @@
+{
+  "id": 25038,
+  "name": "Бананы",
+  "price": 171,
+  "price_before_discount": null,
+  "count_step": 0.2,
+  "is_countable": false,
+  "max_quantity": 5,
+  "photo": "",
+  "description": "",
+  "consist": "Бананы вес (Лента)",
+  "info": {
+    "weight": "200 г"
+  }
+}
