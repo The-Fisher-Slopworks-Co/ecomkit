@@ -166,7 +166,7 @@ describe("lifemart provider", () => {
     });
   });
 
-  test("reads a product card with its composition", async () => {
+  test("reads a product card with its composition and nutrition", async () => {
     const { lifemart, ctx } = setup();
 
     const product = await required(lifemart, "product")("25423", ctx);
@@ -175,7 +175,26 @@ describe("lifemart provider", () => {
       id: "25423",
       price: money(10900),
       description: "нормализованное молоко",
+      nutrition: {
+        portion: "1000 мл",
+        perPortion: { kcal: 530, proteinG: 30, fatG: 25, carbsG: 47 },
+        per100g: { kcal: 53, proteinG: 3, fatG: 2.5, carbsG: 4.7 },
+      },
     });
+  });
+
+  test("gives nutrition in search results and leaves it out when missing", async () => {
+    const { lifemart, ctx } = setup();
+
+    const page = await required(lifemart, "search")({ text: "молоко" }, ctx);
+    const byId = new Map(page.items.map((item) => [item.id, item]));
+
+    expect(byId.get("22241")?.nutrition).toEqual({
+      portion: "250 г",
+      perPortion: { kcal: 244, proteinG: 3.3, fatG: 16.3, carbsG: 21.3 },
+      per100g: { kcal: 97.6, proteinG: 1.3, fatG: 6.5, carbsG: 8.5 },
+    });
+    expect(byId.get("7571")?.nutrition).toBeUndefined();
   });
 
   test("reports a missing product as not found", async () => {
