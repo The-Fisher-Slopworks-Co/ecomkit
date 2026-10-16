@@ -34,6 +34,9 @@ function fixtureFile(method: string, url: URL): string | null {
     return id === "25423" || id === "25038" ? `product-${id}.json` : null;
   }
   if (method === "GET" && url.pathname === "/api/cart") return "cart.json";
+  if (method === "GET" && url.pathname === "/api/user/profile") {
+    return "user-profile.json";
+  }
   if (method === "GET" && url.pathname === "/api/address") {
     return "address.json";
   }
@@ -368,4 +371,23 @@ describe("lifemart provider", () => {
     ]);
     expect(requests[0]?.url.searchParams.has("department")).toBe(false);
   });
+
+  test("previews the checkout with the profile email checked", async () => {
+    const checkoutCart = await fixtureJson("cart-checkout.json");
+    const { lifemart, ctx, requests } = setup({
+      "GET /api/cart": checkoutCart,
+    });
+
+    const preview = await required(lifemart, "checkoutPreview")(ctx);
+
+    expect(preview.payment).toBe("СБП");
+    expect(requests.map((r) => r.url.pathname).toSorted()).toEqual([
+      "/api/cart",
+      "/api/user/profile",
+    ]);
+  });
 });
+
+async function fixtureJson(name: string): Promise<unknown> {
+  return JSON.parse(await readFile(new URL(name, FIXTURES), "utf8"));
+}
