@@ -72,15 +72,15 @@ describe("toCheckoutPreview", () => {
 
   test("subtracts a promo code discount from the total", () => {
     const preview = toCheckoutPreview(
-      { ...cart, total_amount: 230.76 },
+      { ...cart, discount_amount: 26 },
       profile,
     );
 
     expect(preview).toMatchObject({
       subtotal: money(25640),
-      discount: money(2564),
+      discount: money(2600),
       delivery: money(9900),
-      total: money(32976),
+      total: money(32940),
     });
   });
 

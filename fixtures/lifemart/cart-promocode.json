@@ -17,16 +17,16 @@
     ],
     "promoevents": [
       {
-        "id": "promo-1",
+        "id": 1001,
         "promocode": "SALE10",
-        "title": "Скидка 10% по промокоду",
-        "status": "accepted",
+        "title": "Скидка 10% на весь заказ",
+        "status": "active",
         "error_message": null
       }
     ],
-    "total_amount": 169.2,
+    "total_amount": 188,
     "total_amount_before_discount": 188,
-    "discount_amount": 18.8,
+    "discount_amount": 19,
     "delivery_price": 99,
     "delivery_type": "delivery",
     "city_id": 1

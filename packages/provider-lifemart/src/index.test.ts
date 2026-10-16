@@ -352,9 +352,9 @@ describe("lifemart provider", () => {
     ).toEqual({ promocode: "sale10" });
     expect(cart).toMatchObject({
       subtotal: money(18_800),
-      discount: money(1_880),
+      discount: money(1_900),
       delivery: money(9_900),
-      total: money(26_820),
+      total: money(26_800),
     });
   });
 

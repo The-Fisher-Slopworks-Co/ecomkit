@@ -1,10 +1,4 @@
-import {
-  EcomError,
-  money,
-  sumMoney,
-  type Cart,
-  type CartItem,
-} from "@ecomkit/core";
+import { EcomError, money, type Cart, type CartItem } from "@ecomkit/core";
 import {
   productUrl,
   rubles,
@@ -56,6 +50,7 @@ export interface CartEntity {
   readonly products?: readonly CartLine[] | null;
   readonly promoevents?: readonly PromoEvent[] | null;
   readonly total_amount: number;
+  readonly discount_amount?: number | null;
   readonly delivery_price?: number | null;
   readonly delivery_type?: string | null;
   readonly delivery_address?: GeoAddress | null;
@@ -104,17 +99,15 @@ function toCartItem(line: CartLine): CartItem {
 }
 
 export function toCart(cart: CartEntity): Cart {
-  const items = (cart.products ?? []).map(toCartItem);
-  const subtotal = sumMoney(items.map((item) => item.total));
-  const goods = rubles(cart.total_amount);
-  const discount = subtotal.amount - goods.amount;
+  const subtotal = rubles(cart.total_amount);
+  const discount = rubles(cart.discount_amount ?? 0);
   const delivery = rubles(cart.delivery_price ?? 0);
   return {
-    items,
+    items: (cart.products ?? []).map(toCartItem),
     subtotal,
-    ...(discount > 0 ? { discount: money(discount) } : {}),
+    ...(discount.amount > 0 ? { discount } : {}),
     delivery,
-    total: sumMoney([goods, delivery]),
+    total: money(subtotal.amount - discount.amount + delivery.amount),
   };
 }
 
