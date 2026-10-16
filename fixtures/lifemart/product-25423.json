@@ -10,6 +10,15 @@
   "description": "",
   "consist": "нормализованное молоко",
   "info": {
-    "weight": "1000 мл"
+    "weight": "1000 мл",
+    "proteins_100": "3",
+    "fats_100": "2,5",
+    "carbohydrates_100": "4,7",
+    "calories_100": "53",
+    "proteins": "30",
+    "fats": "25",
+    "carbohydrates": "47",
+    "calories": "530",
+    "weight_value": 1000
   }
 }
