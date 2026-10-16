@@ -1,0 +1,65 @@
+{
+  "products": [
+    {
+      "id": 25423,
+      "name": "Молоко 2,5%, Талицкое",
+      "price": 109,
+      "price_before_discount": 125,
+      "count_step": 1,
+      "is_countable": true,
+      "max_quantity": 4,
+      "photo": "https://img.lifemart.ru/im/menuProduct/6943e904ed23a_w900.jpg",
+      "description": "",
+      "consist": "нормализованное молоко",
+      "info": {
+        "weight": "1000 мл"
+      }
+    },
+    {
+      "id": 7571,
+      "name": "Молоко топлёное 4% БЗМЖ",
+      "price": 94,
+      "price_before_discount": null,
+      "count_step": 1,
+      "is_countable": true,
+      "max_quantity": 12,
+      "photo": "https://img.lifemart.ru/im/menuProduct/61c947c0cbf74_w900.jpeg",
+      "description": "",
+      "consist": "Изготовлено из нормализованного\r\nпастеризованного молока.",
+      "info": {
+        "weight": "0,5 л"
+      }
+    },
+    {
+      "id": 22241,
+      "name": "Корейское молоко Банан",
+      "price": 187,
+      "price_before_discount": null,
+      "count_step": 1,
+      "is_countable": true,
+      "max_quantity": 0,
+      "photo": "https://img.lifemart.ru/im/menuProduct/67e12367d845f_w900.jpg",
+      "description": "Один из самых популярных напитков, который пробовали почти все корейцы — банановое молоко. Бананы были редкостью ввиду дороговизны импорта, а банановое молоко стало идеальным напитком, сочетающим вкус уникального фрукта и легкую сладость. \r\n\r\n– 100% веган\r\n– без лактозы\r\n– нежный молочно-банановый вкус",
+      "consist": "Вода, стружка кокосовая,  сироп топинамбура (клубни топинамбура, вода), загуститель - гуаровая камедь, наполнитель Банан (мякоть банана, глюкозныя сироп, инвертный сахарный сироп, вода, ароматизатор натуральный, карамельный сахарный сироп, загуститель - ксантановая камедь, регулятор кислотности - лимонная кислота, краситель - куркумин, регулятор кислотности - аскорбиновая кислота), ароматизатор - ванилин.",
+      "info": {
+        "weight": "250 г"
+      }
+    },
+    {
+      "id": 25038,
+      "name": "Бананы",
+      "price": 171,
+      "price_before_discount": null,
+      "count_step": 0.2,
+      "is_countable": false,
+      "max_quantity": 0,
+      "photo": "",
+      "description": "",
+      "consist": "Бананы вес (Лента)",
+      "info": {
+        "weight": "200 г"
+      }
+    }
+  ],
+  "categories": []
+}

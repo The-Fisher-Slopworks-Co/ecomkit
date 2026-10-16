@@ -22,6 +22,7 @@
       },
       "devDependencies": {
         "@ecomkit/core": "workspace:*",
+        "@ecomkit/provider-lifemart": "workspace:*",
         "@ecomkit/provider-magnit": "workspace:*",
         "@ecomkit/provider-mock": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.32.1",
@@ -36,6 +37,13 @@
       "version": "0.0.0",
       "optionalDependencies": {
         "@napi-rs/keyring": "^2.1.1",
+      },
+    },
+    "packages/provider-lifemart": {
+      "name": "@ecomkit/provider-lifemart",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ecomkit/core": "workspace:*",
       },
     },
     "packages/provider-magnit": {
@@ -55,6 +63,8 @@
   },
   "packages": {
     "@ecomkit/core": ["@ecomkit/core@workspace:packages/core"],
+
+    "@ecomkit/provider-lifemart": ["@ecomkit/provider-lifemart@workspace:packages/provider-lifemart"],
 
     "@ecomkit/provider-magnit": ["@ecomkit/provider-magnit@workspace:packages/provider-magnit"],
 
