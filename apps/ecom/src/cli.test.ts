@@ -36,6 +36,30 @@ describe("ecom CLI", () => {
     expect(cli.out[1]).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
+  test("prints a provider's commands and notes", async () => {
+    const cli = harness();
+
+    expect(await cli.run("board", "--help")).toBe(0);
+    expect(cli.out.at(-1)).toBe(
+      [
+        "ecom board: Classifieds without a cart",
+        "Supports: search",
+        "",
+        "Commands:",
+        "  messages  List chat messages",
+        "",
+        "Notes:",
+        "- Messages are read-only.",
+      ].join("\n"),
+    );
+    expect(await cli.run("help", "board", "--json")).toBe(0);
+    expect(cli.json().notes).toEqual(["Messages are read-only."]);
+    expect(await cli.run("login", "--help")).toBe(0);
+    expect(cli.out.at(-1)).toContain("ecom <provider> <command>");
+    expect(await cli.run("nope", "--help", "--json")).toBe(1);
+    expect(cli.json().error.code).toBe("unknown_provider");
+  });
+
   test("walks search, cart and a confirmed checkout", async () => {
     const cli = harness();
 

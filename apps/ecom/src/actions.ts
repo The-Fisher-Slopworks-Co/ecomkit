@@ -38,7 +38,15 @@ function capability<K extends Capability>(
 }
 
 export function listProviders(runtime: Runtime) {
-  return [...runtime.providers.values()].map((provider) => ({
+  return [...runtime.providers.values()].map(describe);
+}
+
+export function describeProvider(runtime: Runtime, id: string) {
+  return describe(getProvider(runtime, id));
+}
+
+function describe(provider: Provider) {
+  return {
     id: provider.id,
     title: provider.title,
     capabilities: capabilities(provider),
@@ -46,7 +54,8 @@ export function listProviders(runtime: Runtime) {
       ([name, command]) => ({ name, description: command.description }),
     ),
     secrets: provider.secrets.map((field) => field.key),
-  }));
+    notes: provider.notes ?? [],
+  };
 }
 
 export function search(runtime: Runtime, id: string, query: SearchQuery) {

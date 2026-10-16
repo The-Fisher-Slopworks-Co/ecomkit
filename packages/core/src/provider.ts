@@ -38,6 +38,7 @@ export interface Provider {
   readonly id: string;
   readonly title: string;
   readonly secrets: readonly SecretField[];
+  readonly notes?: readonly string[];
   readonly commands?: Readonly<Record<string, ProviderCommand>>;
 
   login?(ask: Ask, ctx: ProviderContext, options: LoginOptions): Promise<void>;

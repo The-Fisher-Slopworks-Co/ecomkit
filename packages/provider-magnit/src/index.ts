@@ -167,6 +167,13 @@ export function createMagnitProvider({
   return {
     id: "magnit",
     title: "Magnit delivery (express catalogue of one store)",
+    notes: [
+      "The catalogue belongs to one store. After `ecom login magnit` it is the store of the delivery address chosen in the Magnit app; without signing in, find stores with `ecom magnit stores <lat> <lon>` and pick one with `ecom magnit store <code>`.",
+      "Sign in with an SMS code. If the SMS came but entering it was interrupted, `ecom login magnit --code` takes it without sending a new one.",
+      'Weighted goods are sold in portions named with their weight: `--qty 2` of "…, 300 г" puts 600 g in the cart.',
+      "Checkout uses the address, delivery time and payment method chosen in the Magnit app, and the profile needs an email. For SBP or Magnit Pay the order comes with a payment link.",
+      "Checkout follows the app's API and has not been tried with a real order yet.",
+    ],
     secrets: [
       {
         key: "store",

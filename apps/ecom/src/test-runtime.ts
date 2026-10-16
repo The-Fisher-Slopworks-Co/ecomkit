@@ -29,6 +29,7 @@ const boardProvider: Provider = {
   id: "board",
   title: "Classifieds without a cart",
   secrets: [{ key: "token", label: "Board API token" }],
+  notes: ["Messages are read-only."],
   async search(_query, ctx) {
     await ctx.secrets.require("token");
     return { items: [] };

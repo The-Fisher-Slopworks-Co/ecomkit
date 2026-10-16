@@ -36,6 +36,7 @@ bun run ecom -- mock search milk --json   # the CLI from source
 - **Errors** are `EcomError` with a `code`; the CLI prints `{ "error": { code, message } }` under `--json` and exits 1.
 - **No code comments.** Names and tests carry the meaning.
 - **Tests** are co-located `*.test.ts` run by `bun test`. Provider HTTP goes through `ctx.http`, so tests pass a `fetch` (on `Runtime`, or to `createHttpClient`) that serves `fixtures/`.
+- **`README.md` stays minimal:** what ecom is, install, usage, the `## Сервисы` matrix, limits. How a service works goes into the provider's `notes` and command descriptions, printed by `ecom <provider> --help`.
 - The license is covered by `REUSE.toml`; source files carry no SPDX headers.
 
 ### Definition of done
