@@ -47,7 +47,8 @@ export function createMcpServer(runtime: Runtime, version: string): McpServer {
     "search",
     {
       title: "Search products",
-      description: "Search a provider's catalog. Prices are in minor units.",
+      description:
+        "Search a provider's catalog. Prices are in minor units. Food may carry `nutrition`: kcal and grams of protein, fat and carbs per portion (`portion` is its size) and per 100 g.",
       inputSchema: {
         provider,
         query: z.string().min(1),
@@ -70,7 +71,8 @@ export function createMcpServer(runtime: Runtime, version: string): McpServer {
     "product",
     {
       title: "Get product",
-      description: "Get one product by id.",
+      description:
+        "Get one product by id, with its composition and, for food, `nutrition` per portion and per 100 g.",
       inputSchema: { provider, id: z.string().min(1) },
       annotations: readOnly,
     },

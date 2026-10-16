@@ -2,6 +2,8 @@ import {
   formatMoney,
   type Address,
   type Cart,
+  type Macros,
+  type Nutrition,
   type CheckoutResult,
   type Order,
   type Page,
@@ -11,7 +13,7 @@ import {
 export function formatProducts(page: Page<Product>): string {
   const lines = page.items.map(
     (product) =>
-      `${product.id}  ${product.title}  ${formatMoney(product.price)}${product.available ? "" : "  (out of stock)"}`,
+      `${product.id}  ${product.title}  ${formatMoney(product.price)}${product.nutrition ? `  ${formatNutrition(product.nutrition, true)}` : ""}${product.available ? "" : "  (out of stock)"}`,
   );
   if (lines.length === 0) lines.push("Nothing found");
   if (page.nextCursor !== undefined) {
@@ -26,11 +28,25 @@ export function formatProduct(product: Product): string {
     `id: ${product.id}`,
     `price: ${formatMoney(product.price)}${product.oldPrice ? ` (was ${formatMoney(product.oldPrice)})` : ""}`,
     product.brand && `brand: ${product.brand}`,
+    product.nutrition && `nutrition: ${formatNutrition(product.nutrition)}`,
     product.available ? undefined : "out of stock",
     product.url,
   ]
     .filter((line) => line !== undefined && line !== "")
     .join("\n");
+}
+
+function formatNutrition(nutrition: Nutrition, brief = false): string {
+  const parts = [
+    nutrition.perPortion &&
+      `${nutrition.portion ?? "portion"}: ${formatMacros(nutrition.perPortion)}`,
+    nutrition.per100g && `100 g: ${formatMacros(nutrition.per100g)}`,
+  ].filter(Boolean);
+  return (brief ? parts.slice(0, 1) : parts).join("; ");
+}
+
+function formatMacros(macros: Macros): string {
+  return `${macros.kcal} kcal, protein ${macros.proteinG} g, fat ${macros.fatG} g, carbs ${macros.carbsG} g`;
 }
 
 export function formatCart(cart: Cart): string {
