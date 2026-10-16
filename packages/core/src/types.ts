@@ -47,6 +47,7 @@ export interface Cart {
   readonly discount?: Money;
   readonly delivery?: Money;
   readonly total: Money;
+  readonly nutrition?: Macros;
 }
 
 export type OrderStatus =

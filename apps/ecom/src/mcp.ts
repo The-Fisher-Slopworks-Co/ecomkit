@@ -83,7 +83,8 @@ export function createMcpServer(runtime: Runtime, version: string): McpServer {
     "cart",
     {
       title: "Get cart",
-      description: "Show the current cart with totals.",
+      description:
+        "Show the current cart with totals and, where the provider knows it, the total `nutrition` of the food in it.",
       inputSchema: { provider },
       annotations: readOnly,
     },

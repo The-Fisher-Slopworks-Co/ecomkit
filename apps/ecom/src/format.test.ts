@@ -26,6 +26,19 @@ describe("formatCart", () => {
     );
   });
 
+  test("totals the nutrition of the cart", () => {
+    const cart: Cart = {
+      items: [milk],
+      subtotal: fromMajor(198),
+      total: fromMajor(198),
+      nutrition: { kcal: 180, proteinG: 14, fatG: 13, carbsG: 2 },
+    };
+
+    expect(formatCart(cart)).toEndWith(
+      "Total: 198 ₽\nNutrition: 180 kcal, protein 14 g, fat 13 g, carbs 2 g",
+    );
+  });
+
   test("subtracts a discount before delivery", () => {
     const cart: Cart = {
       items: [milk],
