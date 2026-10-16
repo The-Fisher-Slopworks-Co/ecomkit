@@ -114,7 +114,6 @@ export function toCheckoutPreview(
     ...(delivery ? { delivery } : {}),
     total,
     address: toAddress(cart.delivery_address),
-    deliveryWindow: { from: cart.delivery_time, to: cart.delivery_time },
     payment: SBP,
   };
 }

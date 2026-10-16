@@ -13,7 +13,7 @@ const cart = fixture as CheckoutCart;
 const profile = { email: "buyer@example.com" };
 
 describe("toCheckoutPreview", () => {
-  test("shows items, delivery, address, time and SBP payment", () => {
+  test("shows items, delivery, address and SBP payment", () => {
     expect(toCheckoutPreview(cart, profile)).toEqual({
       provider: "lifemart",
       items: [
@@ -28,10 +28,6 @@ describe("toCheckoutPreview", () => {
         city: "Екатеринбург",
         apartment: "1",
         comment: "Домофон не работает",
-      },
-      deliveryWindow: {
-        from: "2026-01-01T12:40:00+05:00",
-        to: "2026-01-01T12:40:00+05:00",
       },
       payment: "СБП",
     });
@@ -82,6 +78,15 @@ describe("toCheckoutPreview", () => {
       delivery: money(9900),
       total: money(32940),
     });
+  });
+
+  test("keeps the moving delivery estimate out of the preview", () => {
+    expect(
+      toCheckoutPreview(
+        { ...cart, delivery_time: "2026-01-01T12:41:07+05:00" },
+        profile,
+      ),
+    ).toEqual(toCheckoutPreview(cart, profile));
   });
 
   test("asks for an email in the profile", () => {
