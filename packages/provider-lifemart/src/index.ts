@@ -9,6 +9,7 @@ import {
   addressLine,
   changed,
   lineIndex,
+  promocodeApplied,
   serviceQuantity,
   savedAddresses,
   toCart,
@@ -221,6 +222,27 @@ export function createLifemartProvider({
       }
     },
     commands: {
+      promo: {
+        description: "Apply the promo code <code> to the cart",
+        async run(args, ctx) {
+          const [code] = args;
+          if (args.length !== 1 || !code?.trim()) {
+            throw new EcomError(
+              "invalid_input",
+              "Usage: ecom lifemart promo <code>",
+            );
+          }
+          const cart = changed(
+            await session.authorized<ChangeCartResponse>(
+              ctx,
+              "POST",
+              "cart/promocode",
+              { body: { promocode: code.trim() } },
+            ),
+          );
+          return toCart(promocodeApplied(cart, code.trim()));
+        },
+      },
       addresses: {
         description:
           "List the delivery addresses saved in your Lifemart profile",

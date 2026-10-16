@@ -1,0 +1,34 @@
+{
+  "success": true,
+  "cart": {
+    "products": [
+      {
+        "id": 7571,
+        "idx": 0,
+        "name": "Молоко топлёное 4% БЗМЖ",
+        "photo": null,
+        "price": 94,
+        "calc_price": 188,
+        "quantity": 2,
+        "count_step": 1,
+        "is_countable": true,
+        "sel_modifiers": []
+      }
+    ],
+    "promoevents": [
+      {
+        "id": 1001,
+        "promocode": "SALE10",
+        "title": "Скидка 10% на весь заказ",
+        "status": "active",
+        "error_message": null
+      }
+    ],
+    "total_amount": 188,
+    "total_amount_before_discount": 188,
+    "discount_amount": 19,
+    "delivery_price": 99,
+    "delivery_type": "delivery",
+    "city_id": 1
+  }
+}

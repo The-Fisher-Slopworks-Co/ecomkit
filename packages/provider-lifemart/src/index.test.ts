@@ -46,6 +46,9 @@ function fixtureFile(method: string, url: URL): string | null {
   if (method === "POST" && url.pathname === "/api/cart/product") {
     return "cart-product.json";
   }
+  if (method === "POST" && url.pathname === "/api/cart/promocode") {
+    return "cart-promocode.json";
+  }
   if (method === "POST" && url.pathname === "/api/cart/delivery") {
     return "cart-delivery.json";
   }
@@ -337,6 +340,59 @@ describe("lifemart provider", () => {
       delivery_address: { id: 1000001, street: "улица Ленина", flat: "1" },
       check_stop: "fail",
     });
+  });
+
+  test("applies a promo code and shows the discount", async () => {
+    const { lifemart, ctx, requests } = setup();
+
+    const cart = await lifemart.commands?.["promo"]?.run([" sale10 "], ctx);
+
+    expect(
+      requests.find((r) => r.url.pathname === "/api/cart/promocode")?.body,
+    ).toEqual({ promocode: "sale10" });
+    expect(cart).toMatchObject({
+      subtotal: money(18_800),
+      discount: money(1_900),
+      delivery: money(9_900),
+      total: money(26_800),
+    });
+  });
+
+  test("passes on a promo code the service rejects", async () => {
+    const { lifemart, ctx } = setup({
+      "POST /api/cart/promocode": {
+        success: false,
+        error_message: "Промокод введен некорректно, попробуйте еще раз",
+      },
+    });
+
+    await expect(
+      lifemart.commands?.["promo"]?.run(["WRONG"], ctx),
+    ).rejects.toThrow("Промокод введен некорректно");
+  });
+
+  test("passes on a promo code that does not fit the cart", async () => {
+    const { lifemart, ctx } = setup({
+      "POST /api/cart/promocode": {
+        success: true,
+        cart: {
+          products: [],
+          total_amount: 0,
+          promoevents: [
+            {
+              promocode: "SALE10",
+              error_message: "Минимальная сумма заказа 1000 ₽",
+            },
+          ],
+        },
+      },
+    });
+
+    await expect(
+      lifemart.commands?.["promo"]?.run(["sale10"], ctx),
+    ).rejects.toThrow(
+      "Lifemart did not apply sale10: Минимальная сумма заказа",
+    );
   });
 
   test("refuses an address that is not saved", async () => {

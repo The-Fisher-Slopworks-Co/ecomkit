@@ -1,4 +1,4 @@
-import { EcomError, sumMoney, type Cart, type CartItem } from "@ecomkit/core";
+import { EcomError, money, type Cart, type CartItem } from "@ecomkit/core";
 import {
   productUrl,
   rubles,
@@ -41,9 +41,16 @@ interface CartLine {
   readonly stop_list_message?: string | null;
 }
 
+interface PromoEvent {
+  readonly promocode?: string | null;
+  readonly error_message?: string | null;
+}
+
 export interface CartEntity {
   readonly products?: readonly CartLine[] | null;
+  readonly promoevents?: readonly PromoEvent[] | null;
   readonly total_amount: number;
+  readonly discount_amount?: number | null;
   readonly delivery_price?: number | null;
   readonly delivery_type?: string | null;
   readonly delivery_address?: GeoAddress | null;
@@ -93,13 +100,28 @@ function toCartItem(line: CartLine): CartItem {
 
 export function toCart(cart: CartEntity): Cart {
   const subtotal = rubles(cart.total_amount);
+  const discount = rubles(cart.discount_amount ?? 0);
   const delivery = rubles(cart.delivery_price ?? 0);
   return {
     items: (cart.products ?? []).map(toCartItem),
     subtotal,
+    ...(discount.amount > 0 ? { discount } : {}),
     delivery,
-    total: sumMoney([subtotal, delivery]),
+    total: money(subtotal.amount - discount.amount + delivery.amount),
   };
+}
+
+export function promocodeApplied(cart: CartEntity, code: string): CartEntity {
+  const event = (cart.promoevents ?? []).find(
+    (candidate) => candidate.promocode?.toLowerCase() === code.toLowerCase(),
+  );
+  if (event?.error_message) {
+    throw new EcomError(
+      "invalid_input",
+      `Lifemart did not apply ${code}: ${event.error_message}`,
+    );
+  }
+  return cart;
 }
 
 export function changed(response: ChangeCartResponse): CartEntity {
