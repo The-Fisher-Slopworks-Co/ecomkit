@@ -9,6 +9,19 @@ export interface Address {
   readonly lon?: number;
 }
 
+export interface Macros {
+  readonly kcal: number;
+  readonly proteinG: number;
+  readonly fatG: number;
+  readonly carbsG: number;
+}
+
+export interface Nutrition {
+  readonly portion?: string;
+  readonly perPortion?: Macros;
+  readonly per100g?: Macros;
+}
+
 export interface Product {
   readonly id: string;
   readonly title: string;
@@ -19,6 +32,7 @@ export interface Product {
   readonly brand?: string;
   readonly available: boolean;
   readonly description?: string;
+  readonly nutrition?: Nutrition;
 }
 
 export interface CartItem {
