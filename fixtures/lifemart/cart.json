@@ -29,6 +29,16 @@
   "total_amount": 256.4,
   "delivery_price": 99,
   "delivery_type": "delivery",
-  "delivery_address": { "id": 1000001, "street": "улица Ленина", "house": "1" },
-  "city_id": 1
+  "delivery_address": {
+    "id": 1000001,
+    "street": "улица Ленина",
+    "house": "1"
+  },
+  "city_id": 1,
+  "total_nutrition": {
+    "calories": 265,
+    "proteins": 6,
+    "fats": 5,
+    "carbohydrates": 42
+  }
 }
