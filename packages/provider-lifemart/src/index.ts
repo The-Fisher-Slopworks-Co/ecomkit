@@ -1,9 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { EcomError, type Provider, type ProviderContext } from "@ecomkit/core";
 import { toProduct, type CatalogItem } from "./catalog.ts";
+import { Session, sessionSecrets } from "./session.ts";
 
-const API_URL = "https://api.lifemart.ru/api/";
-const APP_VERSION = "1.68.0";
 const SCREEN_WIDTH = "1080";
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -12,26 +10,21 @@ interface LifemartOptions {
 }
 
 export function createLifemartProvider({
-  deviceId = randomUUID(),
+  deviceId,
 }: LifemartOptions = {}): Provider {
+  const session = new Session(deviceId);
+
   function get<T>(path: string, query: Record<string, string>) {
     return (ctx: ProviderContext) =>
-      ctx.http(API_URL).get<T>(path, {
-        query,
-        headers: {
-          uuid: deviceId,
-          "app-version": APP_VERSION,
-          "x-platform": "Android",
-          "content-language": "ru",
-          "user-agent": "okhttp/4.12.0",
-        },
-      });
+      session.request<T>(ctx, "GET", path, { query });
   }
 
   return {
     id: "lifemart",
     title: "Lifemart (Жизньмарт) delivery",
-    secrets: [],
+    secrets: sessionSecrets,
+
+    login: (ask, ctx, options) => session.signIn(ask, ctx, options),
 
     async search({ text, limit = DEFAULT_PAGE_SIZE, cursor }, ctx) {
       const offset = parseCursor(cursor);
