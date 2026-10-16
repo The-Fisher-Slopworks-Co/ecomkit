@@ -70,6 +70,20 @@ describe("toCheckoutPreview", () => {
     );
   });
 
+  test("subtracts a promo code discount from the total", () => {
+    const preview = toCheckoutPreview(
+      { ...cart, total_amount: 230.76 },
+      profile,
+    );
+
+    expect(preview).toMatchObject({
+      subtotal: money(25640),
+      discount: money(2564),
+      delivery: money(9900),
+      total: money(32976),
+    });
+  });
+
   test("asks for an email in the profile", () => {
     expect(() => toCheckoutPreview(cart, { email: "" })).toThrow("email");
   });

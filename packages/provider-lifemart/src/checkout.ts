@@ -105,11 +105,12 @@ export function toCheckoutPreview(
       "Lifemart needs an email for online payment; add it to your profile in the Lifemart app",
     );
   }
-  const { items, subtotal, delivery, total } = toCart(cart);
+  const { items, subtotal, discount, delivery, total } = toCart(cart);
   return {
     provider: "lifemart",
     items,
     subtotal,
+    ...(discount ? { discount } : {}),
     ...(delivery ? { delivery } : {}),
     total,
     address: toAddress(cart.delivery_address),
