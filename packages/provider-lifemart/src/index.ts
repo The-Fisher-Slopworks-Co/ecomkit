@@ -1,6 +1,7 @@
 import {
   EcomError,
   previewDigest,
+  type Order,
   type Provider,
   type ProviderContext,
 } from "@ecomkit/core";
@@ -206,19 +207,24 @@ export function createLifemartProvider({
         "cart/send",
         { body: orderRequest(cart, profile) },
       );
-      const id = String(createdOrderId(created));
+      const id = createdOrderId(created);
+      const fromPreview = (orderId: string): Order => ({
+        id: orderId,
+        status: "created",
+        createdAt: new Date().toISOString(),
+        items: preview.items,
+        total: preview.total,
+        ...(preview.address ? { address: preview.address } : {}),
+        ...paymentLink(created),
+      });
+      if (typeof id === "string") return fromPreview(id);
       try {
-        return { ...(await orderById(id, ctx)), ...paymentLink(created) };
-      } catch {
         return {
-          id,
-          status: "created",
-          createdAt: new Date().toISOString(),
-          items: preview.items,
-          total: preview.total,
-          ...(preview.address ? { address: preview.address } : {}),
+          ...(await orderById(String(id), ctx)),
           ...paymentLink(created),
         };
+      } catch {
+        return fromPreview(String(id));
       }
     },
     commands: {
