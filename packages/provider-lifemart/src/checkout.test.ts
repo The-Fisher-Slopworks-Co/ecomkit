@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { money } from "@ecomkit/core";
 import fixture from "../../../fixtures/lifemart/cart-checkout.json" with { type: "json" };
-import { toCheckoutPreview, type CheckoutCart } from "./checkout.ts";
+import {
+  createdOrderId,
+  orderRequest,
+  paymentLink,
+  toCheckoutPreview,
+  type CheckoutCart,
+} from "./checkout.ts";
 
 const cart = fixture as CheckoutCart;
 const profile = { email: "buyer@example.com" };
@@ -66,5 +72,47 @@ describe("toCheckoutPreview", () => {
 
   test("asks for an email in the profile", () => {
     expect(() => toCheckoutPreview(cart, { email: "" })).toThrow("email");
+  });
+});
+
+describe("orderRequest", () => {
+  test("pays by SBP with the profile email and the address comment", () => {
+    expect(orderRequest(cart, profile)).toEqual({
+      delivery_address: { comment: "Домофон не работает" },
+      payment_info: {
+        type: "online",
+        change_from: 0,
+        is_qr_prepayment: true,
+        online: { type: "qr" },
+      },
+      user_data: { email: "buyer@example.com" },
+      is_geolocation_allowed: false,
+      is_rover_delivery: false,
+    });
+  });
+});
+
+describe("order creation", () => {
+  test("prefers the SBP link for payment", () => {
+    expect(
+      paymentLink({
+        success: true,
+        payment_url: "https://p",
+        qr_url: "https://q",
+      }),
+    ).toEqual({ paymentUrl: "https://q" });
+    expect(paymentLink({ success: true, payment_url: "https://p" })).toEqual({
+      paymentUrl: "https://p",
+    });
+  });
+
+  test("passes on a refusal", () => {
+    expect(() =>
+      createdOrderId({
+        success: false,
+        error_code: "stop_list",
+        error_message: "Товар закончился",
+      }),
+    ).toThrow("Товар закончился");
   });
 });

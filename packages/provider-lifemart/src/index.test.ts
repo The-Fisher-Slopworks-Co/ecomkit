@@ -37,6 +37,9 @@ function fixtureFile(method: string, url: URL): string | null {
   if (method === "GET" && url.pathname === "/api/user/profile") {
     return "user-profile.json";
   }
+  if (method === "POST" && url.pathname === "/api/cart/send") {
+    return "cart-send.json";
+  }
   if (method === "GET" && url.pathname === "/api/address") {
     return "address.json";
   }
@@ -51,7 +54,9 @@ function fixtureFile(method: string, url: URL): string | null {
   }
   const order = /^\/api\/orders\/details\/(\d+)$/.exec(url.pathname);
   if (method === "GET" && order) {
-    return order[1] === "100000002" ? `order-${order[1]}.json` : null;
+    return order[1] === "100000002" || order[1] === "100000003"
+      ? `order-${order[1]}.json`
+      : null;
   }
   throw new Error(`No fixture for ${method} ${url.href}`);
 }
@@ -372,19 +377,64 @@ describe("lifemart provider", () => {
     expect(requests[0]?.url.searchParams.has("department")).toBe(false);
   });
 
-  test("previews the checkout with the profile email checked", async () => {
+  test("places a confirmed order paid by SBP", async () => {
     const checkoutCart = await fixtureJson("cart-checkout.json");
     const { lifemart, ctx, requests } = setup({
       "GET /api/cart": checkoutCart,
     });
-
     const preview = await required(lifemart, "checkoutPreview")(ctx);
 
-    expect(preview.payment).toBe("СБП");
-    expect(requests.map((r) => r.url.pathname).toSorted()).toEqual([
-      "/api/cart",
-      "/api/user/profile",
-    ]);
+    const order = await required(lifemart, "placeOrder")(preview, ctx);
+
+    const send = requests.find((r) => r.url.pathname === "/api/cart/send");
+    expect(send?.body).toMatchObject({
+      payment_info: { type: "online", online: { type: "qr" } },
+      user_data: { email: "buyer@example.com" },
+    });
+    expect(order).toMatchObject({
+      id: "100000003",
+      status: "created",
+      paymentUrl: "https://qr.nspk.ru/AS1000000000000000000000000000000",
+    });
+  });
+
+  test("refuses an order that changed after confirmation", async () => {
+    const checkoutCart = await fixtureJson("cart-checkout.json");
+    const { lifemart, ctx, requests } = setup({
+      "GET /api/cart": checkoutCart,
+    });
+    const preview = await required(lifemart, "checkoutPreview")(ctx);
+
+    await expect(
+      required(lifemart, "placeOrder")({ ...preview, payment: "cash" }, ctx),
+    ).rejects.toThrow(
+      expect.objectContaining({ code: "confirmation_required" }),
+    );
+    expect(requests.some((r) => r.url.pathname === "/api/cart/send")).toBe(
+      false,
+    );
+  });
+
+  test("returns the placed order when reading it back fails", async () => {
+    const checkoutCart = await fixtureJson("cart-checkout.json");
+    const { lifemart, ctx } = setup({
+      "GET /api/cart": checkoutCart,
+      "POST /api/cart/send": {
+        success: true,
+        order_id: 100000009,
+        payment_url: "https://pay.example.com/form/9",
+      },
+    });
+    const preview = await required(lifemart, "checkoutPreview")(ctx);
+
+    const order = await required(lifemart, "placeOrder")(preview, ctx);
+
+    expect(order).toMatchObject({
+      id: "100000009",
+      status: "created",
+      total: preview.total,
+      paymentUrl: "https://pay.example.com/form/9",
+    });
   });
 });
 

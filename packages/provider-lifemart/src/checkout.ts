@@ -1,4 +1,9 @@
-import { EcomError, type Address, type CheckoutPreview } from "@ecomkit/core";
+import {
+  EcomError,
+  type Address,
+  type CheckoutPreview,
+  type Order,
+} from "@ecomkit/core";
 import {
   addressLine,
   toCart,
@@ -29,6 +34,15 @@ export interface CheckoutCart extends CartEntity {
 
 export interface Profile {
   readonly email?: string | null;
+}
+
+export interface OrderCreated {
+  readonly success: boolean;
+  readonly order_id?: number | null;
+  readonly payment_url?: string | null;
+  readonly qr_url?: string | null;
+  readonly error_code?: string | null;
+  readonly error_message?: string | null;
 }
 
 export function toCheckoutPreview(
@@ -120,4 +134,34 @@ function toAddress(address: GeoAddress): Address {
     ...(address.flat ? { apartment: address.flat } : {}),
     ...(address.comment ? { comment: address.comment } : {}),
   };
+}
+
+export function orderRequest(cart: CheckoutCart, profile: Profile) {
+  return {
+    delivery_address: { comment: cart.delivery_address?.comment ?? "" },
+    payment_info: {
+      type: "online",
+      change_from: 0,
+      is_qr_prepayment: true,
+      online: { type: "qr" },
+    },
+    user_data: { email: profile.email },
+    is_geolocation_allowed: false,
+    is_rover_delivery: false,
+  };
+}
+
+export function createdOrderId(created: OrderCreated): number {
+  if (!created.success || !created.order_id) {
+    throw new EcomError(
+      "invalid_input",
+      `Lifemart did not place the order: ${created.error_message || created.error_code || "unknown error"}`,
+    );
+  }
+  return created.order_id;
+}
+
+export function paymentLink(created: OrderCreated): Partial<Order> {
+  const url = created.qr_url || created.payment_url;
+  return url ? { paymentUrl: url } : {};
 }
