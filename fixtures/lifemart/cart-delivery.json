@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "cart": {
+    "products": [
+      {
+        "id": 7571,
+        "idx": 0,
+        "name": "Молоко топлёное 4% БЗМЖ",
+        "photo": null,
+        "price": 94,
+        "calc_price": 188,
+        "quantity": 2,
+        "count_step": 1,
+        "is_countable": true,
+        "sel_modifiers": []
+      },
+      {
+        "id": 25038,
+        "idx": 3,
+        "name": "Бананы",
+        "photo": null,
+        "price": 171,
+        "calc_price": 68.4,
+        "quantity": 0.4,
+        "count_step": 0.2,
+        "is_countable": false,
+        "sel_modifiers": [],
+        "stop_list_message": "Нет в магазине"
+      }
+    ],
+    "total_amount": 256.4,
+    "delivery_price": 99,
+    "delivery_type": "delivery",
+    "delivery_address": {
+      "id": 1000001,
+      "street": "улица Ленина",
+      "house": "1"
+    },
+    "city_id": 1
+  }
+}

@@ -17,7 +17,10 @@ interface Recorded {
   readonly method: string;
   readonly url: URL;
   readonly headers: Headers;
+  readonly body: unknown;
 }
+
+type Overrides = Readonly<Record<string, unknown>>;
 
 function fixtureFile(method: string, url: URL): string | null {
   if (method === "GET" && url.pathname === "/api/menu/search") {
@@ -29,6 +32,13 @@ function fixtureFile(method: string, url: URL): string | null {
   ) {
     return url.searchParams.get("id") === "25423" ? "product-25423.json" : null;
   }
+  if (method === "GET" && url.pathname === "/api/cart") return "cart.json";
+  if (method === "GET" && url.pathname === "/api/address") {
+    return "address.json";
+  }
+  if (method === "POST" && url.pathname === "/api/cart/delivery") {
+    return "cart-delivery.json";
+  }
   if (method === "GET" && url.pathname === "/api/orders/list") {
     return "orders-list.json";
   }
@@ -39,15 +49,25 @@ function fixtureFile(method: string, url: URL): string | null {
   throw new Error(`No fixture for ${method} ${url.href}`);
 }
 
-function setup() {
+function setup(overrides: Overrides = {}) {
   const requests: Recorded[] = [];
   const fetch = async (input: string, init?: RequestInit) => {
     const url = new URL(input);
     const method = init?.method ?? "GET";
-    requests.push({ method, url, headers: new Headers(init?.headers) });
-    const file = fixtureFile(method, url);
+    requests.push({
+      method,
+      url,
+      headers: new Headers(init?.headers),
+      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+    });
+    const override = overrides[`${method} ${url.pathname}`];
+    const file = override === undefined ? fixtureFile(method, url) : null;
     const body =
-      file === null ? "null" : await readFile(new URL(file, FIXTURES), "utf8");
+      override !== undefined
+        ? JSON.stringify(override)
+        : file === null
+          ? "null"
+          : await readFile(new URL(file, FIXTURES), "utf8");
     return new Response(body, {
       headers: { "content-type": "application/json" },
     });
@@ -210,5 +230,62 @@ describe("lifemart provider", () => {
     await expect(required(lifemart, "order")("100000009", ctx)).rejects.toThrow(
       expect.objectContaining({ code: "not_found" }),
     );
+  });
+
+  test("reads the cart in steps and marks lines out of stock", async () => {
+    const { lifemart, ctx } = setup();
+
+    const cart = await required(lifemart, "cart")(ctx);
+
+    expect(cart.items).toEqual([
+      expect.objectContaining({ quantity: 2, total: money(18800) }),
+      expect.objectContaining({
+        product: expect.objectContaining({
+          title: "Бананы, 200 г",
+          price: money(3420),
+          available: false,
+        }),
+        quantity: 2,
+        total: money(6840),
+      }),
+    ]);
+    expect(cart).toMatchObject({
+      subtotal: money(25640),
+      delivery: money(9900),
+      total: money(35540),
+    });
+  });
+
+  test("lists saved addresses and delivers the cart to one", async () => {
+    const { lifemart, ctx, requests } = setup();
+    const commands = lifemart.commands ?? {};
+
+    const listed = await commands["addresses"]?.run([], ctx);
+    await commands["address"]?.run(["1000001"], ctx);
+
+    expect(listed).toEqual([
+      {
+        id: 1000001,
+        city: "Екатеринбург",
+        address: "улица Ленина, 1",
+        apartment: "1",
+      },
+    ]);
+    const post = requests.find((r) => r.url.pathname === "/api/cart/delivery");
+    expect(post?.url.searchParams.get("screen_width")).toBe("1080");
+    expect(post?.body).toMatchObject({
+      city_id: 1,
+      delivery_type: "delivery",
+      delivery_address: { id: 1000001, street: "улица Ленина", flat: "1" },
+      check_stop: "fail",
+    });
+  });
+
+  test("refuses an address that is not saved", async () => {
+    const { lifemart, ctx } = setup();
+
+    await expect(
+      lifemart.commands?.["address"]?.run(["42"], ctx),
+    ).rejects.toThrow(expect.objectContaining({ code: "not_found" }));
   });
 });
