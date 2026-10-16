@@ -40,12 +40,11 @@ export function formatCart(cart: Cart): string {
       (item) =>
         `${item.quantity} × ${item.product.title} (${item.product.id})  ${formatMoney(item.total)}`,
     ),
-    ...(cart.delivery
-      ? [
-          `Subtotal: ${formatMoney(cart.subtotal)}`,
-          `Delivery: ${formatMoney(cart.delivery)}`,
-        ]
+    ...(cart.delivery || cart.discount
+      ? [`Subtotal: ${formatMoney(cart.subtotal)}`]
       : []),
+    ...(cart.discount ? [`Discount: −${formatMoney(cart.discount)}`] : []),
+    ...(cart.delivery ? [`Delivery: ${formatMoney(cart.delivery)}`] : []),
     `Total: ${formatMoney(cart.total)}`,
   ].join("\n");
 }

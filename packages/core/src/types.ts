@@ -30,6 +30,7 @@ export interface CartItem {
 export interface Cart {
   readonly items: readonly CartItem[];
   readonly subtotal: Money;
+  readonly discount?: Money;
   readonly delivery?: Money;
   readonly total: Money;
 }
@@ -67,6 +68,7 @@ export interface CheckoutPreview {
   readonly provider: string;
   readonly items: readonly CartItem[];
   readonly subtotal: Money;
+  readonly discount?: Money;
   readonly delivery?: Money;
   readonly total: Money;
   readonly address?: Address;
