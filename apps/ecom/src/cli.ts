@@ -51,7 +51,18 @@ Provider commands:
   checkout [--confirm <code>]  without --confirm only previews and prints the code
   orders
   order <id>
-  <provider-specific command> [args]`;
+  <provider-specific command> [args]
+
+ecom <provider> --help         that provider's own commands and notes`;
+
+const builtins = new Set([
+  "help",
+  "providers",
+  "doctor",
+  "login",
+  "logout",
+  "mcp",
+]);
 
 function parse(argv: readonly string[]) {
   return parseArgs({
@@ -91,12 +102,25 @@ export async function runCli(
       deps.stdout(version);
       return 0;
     }
-    if (first === undefined || first === "help" || values.help) {
+    if (first === undefined) {
+      deps.stdout(usage);
+      return 0;
+    }
+    const help = first === "help" || values.help;
+    const topic = first === "help" ? rest[0] : first;
+    const helpFor =
+      help && topic !== undefined && !builtins.has(topic) ? topic : undefined;
+    if (help && helpFor === undefined) {
       deps.stdout(usage);
       return 0;
     }
 
     const runtime = await deps.createRuntime();
+    if (helpFor !== undefined) {
+      const output = providerHelp(runtime, helpFor);
+      deps.stdout(json ? JSON.stringify(output.data, null, 2) : output.text);
+      return 0;
+    }
     if (first === "mcp") {
       await deps.serveMcp(runtime);
       return 0;
@@ -143,6 +167,28 @@ async function dispatch(
   }
 }
 
+function providerHelp(runtime: Runtime, id: string): Output {
+  const data = actions.describeProvider(runtime, id);
+  const width = Math.max(0, ...data.commands.map((c) => c.name.length));
+  const text = [
+    `ecom ${id}: ${data.title}`,
+    `Supports: ${data.capabilities.join(", ")}`,
+    ...(data.commands.length === 0
+      ? []
+      : [
+          "",
+          "Commands:",
+          ...data.commands.map(
+            (c) => `  ${c.name.padEnd(width)}  ${c.description}`,
+          ),
+        ]),
+    ...(data.notes.length === 0
+      ? []
+      : ["", "Notes:", ...data.notes.map((note) => `- ${note}`)]),
+  ].join("\n");
+  return { data, text };
+}
+
 async function providerCommand(
   runtime: Runtime,
   id: string,
@@ -152,7 +198,7 @@ async function providerCommand(
   actions.getProvider(runtime, id);
   switch (command) {
     case undefined: {
-      const data = actions.listProviders(runtime).find((p) => p.id === id);
+      const data = actions.describeProvider(runtime, id);
       return { data, text: JSON.stringify(data, null, 2) };
     }
     case "search": {

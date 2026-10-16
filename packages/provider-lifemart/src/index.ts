@@ -114,6 +114,15 @@ export function createLifemartProvider({
   return {
     id: "lifemart",
     title: "Lifemart (Жизньмарт) delivery",
+    notes: [
+      "Search and product cards work without signing in. Food shows nutrition: per serving in search, per serving and per 100 g on the card, totals in the cart, and in the `nutrition` field under --json.",
+      "Sign in with an SMS code. `ecom login lifemart --code` takes a code that was already sent, e.g. after an interrupted entry or one requested on lifemart.ru. If Lifemart asks for a captcha, request the code on the site and enter it this way: ecom does not solve captchas.",
+      "`orders` lists the last 10 orders.",
+      "The cart is bound to the device, so ecom has its own cart, not the one in the app. The store and stock depend on the delivery address: pick one of the profile's saved addresses with `ecom lifemart addresses` and `ecom lifemart address <id>`. Until then search and cards show stock across the whole chain.",
+      'Weighted goods are sold in steps named with their weight, priced per step: "Бананы, 200 г" costs 200 g of bananas and `--qty 2` puts 400 g in the cart.',
+      "`promo <code>` applies to ecom's cart; the discount shows in the cart and the checkout preview, and a rejected code comes with Lifemart's explanation.",
+      "Checkout delivers to the chosen address at the nearest time and is paid by SBP through the payment link it returns. The order gets its number only after payment, then it appears in `orders`. Online payment needs an email in the profile. A cart below the minimum sum, with an unavailable item or with a fee is not ordered.",
+    ],
     secrets: sessionSecrets,
 
     login: (ask, ctx, options) => session.signIn(ask, ctx, options),

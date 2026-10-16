@@ -123,9 +123,13 @@ PR that uses them, with the mock provider and tests updated.
 
 ## 5. Docs
 
-- `README.md` is in Russian: add a section for the service (sign-in, store or
-  address, what is supported, limits) and a row in the `## Сервисы` matrix.
-  Mark anything not verified end to end with a footnote.
+- Document the service in the provider's `notes` (sign-in, store or address,
+  weighted goods, checkout requirements, limits) and in each command's
+  `description`; `ecom <provider> --help` prints them. Say there when something
+  is not verified end to end.
+- `README.md` stays minimal and is in Russian: only add or update the
+  service's row in the `## Сервисы` matrix, with a footnote for anything not
+  verified end to end. Never add a section per service.
 - Everything else, including PR titles and bodies, is in English.
 
 ## 6. Ship
